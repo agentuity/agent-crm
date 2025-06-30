@@ -1,0 +1,35 @@
+{
+  "name": "agent-crm",
+  "description": "CRM Agent",
+  "version": "0.0.1",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "build": "agentuity build",
+    "dev": "agentuity dev",
+    "format": "biome format --write .",
+    "lint": "biome lint .",
+    "prestart": "agentuity bundle",
+    "start": "bun run .agentuity/index.js"
+  },
+  "keywords": [
+    "agentuity",
+    "agent",
+    "ai",
+    "ai agent",
+    "bun"
+  ],
+  "private": true,
+  "devDependencies": {
+    "@biomejs/biome": "^2.0.6",
+    "@types/bun": "^1.2.17"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "@agentuity/sdk": "^0.0.130",
+    "openai": "^5.8.2"
+  },
+  "module": "index.ts"
+}
