@@ -26,6 +26,7 @@ export const createAgent = (prompt: string) => {
         ${JSON.stringify(data)}
         </payload>`,
         tools: { addPersonTool, updatePersonByEmailTool, getPersonByEmailTool },
+        maxSteps: 10,
       });
       return resp.text("DONE");
     } catch (error) {

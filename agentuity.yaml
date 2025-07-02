@@ -23,6 +23,7 @@ development:
     # Rules for files to watch for changes
     files:
       - src/**
+      - lib/**
   # The command to run the development server
   command: bun
   # The arguments to pass to the development server
