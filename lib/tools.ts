@@ -14,18 +14,27 @@ export const addPersonTool = tool({
     emailAddress: z.string().email(),
     firstEmailInteraction: z.coerce.date().optional(),
     lastEmailInteraction: z.coerce.date().optional(),
+    firstCalendarInteraction: z.coerce.date().optional(),
+    nextCalendarInteraction: z.coerce.date().optional(),
+    lastCalendarInteraction: z.coerce.date().optional(),
   }),
   execute: async ({
     name,
     emailAddress,
     firstEmailInteraction,
     lastEmailInteraction,
+    firstCalendarInteraction,
+    nextCalendarInteraction,
+    lastCalendarInteraction,
   }) => {
     await addPerson(
       name,
       emailAddress,
       firstEmailInteraction,
-      lastEmailInteraction
+      lastEmailInteraction,
+      firstCalendarInteraction,
+      nextCalendarInteraction,
+      lastCalendarInteraction
     );
     return { ok: true };
   },
@@ -50,17 +59,26 @@ export const updatePersonByEmailTool = tool({
     name: z.string().optional(),
     firstEmailInteraction: z.coerce.date().nullable().optional(),
     lastEmailInteraction: z.coerce.date().nullable().optional(),
+    firstCalendarInteraction: z.coerce.date().nullable().optional(),
+    nextCalendarInteraction: z.coerce.date().nullable().optional(),
+    lastCalendarInteraction: z.coerce.date().nullable().optional(),
   }),
   execute: async ({
     emailAddress,
     name,
     firstEmailInteraction,
     lastEmailInteraction,
+    firstCalendarInteraction,
+    nextCalendarInteraction,
+    lastCalendarInteraction,
   }) => {
     await updatePersonByEmail(emailAddress, {
       name,
       firstEmailInteraction,
       lastEmailInteraction,
+      firstCalendarInteraction,
+      nextCalendarInteraction,
+      lastCalendarInteraction,
     });
     return { ok: true };
   },
