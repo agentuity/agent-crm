@@ -1,10 +1,27 @@
 import { createAgent } from "../../../lib/agent";
 
 const prompt = `
-You will get an event as a payload. You must update the database with the new information.
-The event can be an email or a calendar meeting.
-You should first check if the person exists in the database with their email.
-If they do, you should update the database with the new information (including email and calendar interactions).
-If they do not, you should add them to the database.`;
+You have access to the following tools for managing people in the attio_mockup table:
 
-export default createAgent(prompt);
+1. addPerson
+   - Description: Add a new person to the database.
+   - Parameters: Requires the person's name and email address. You can also provide optional dates for first/last email interaction, first/next/last calendar interaction.
+   - When to use: Use this tool when you need to create a new person record.
+
+2. getPeople
+   - Description: Retrieve a list of people from the database.
+   - Parameters: Optionally specify a limit (1-100) for the number of people to return.
+   - When to use: Use this tool when you need to list people, or when searching for people in general.
+
+3. updatePersonByEmail
+   - Description: Update a person's details using their email address as the identifier.
+   - Parameters: Requires the email address. You can update the name and any of the interaction dates (set to null to clear a date).
+   - When to use: Use this tool to modify an existing person's information.
+
+4. getPersonByEmail
+   - Description: Retrieve details for a specific person by their email address.
+   - Parameters: Requires the email address.
+   - When to use: Use this tool to look up a single person's details.
+`;
+
+export default createAgent(prompt, {});

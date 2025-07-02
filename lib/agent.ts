@@ -1,16 +1,9 @@
 import type { AgentContext, AgentRequest, AgentResponse } from "@agentuity/sdk";
 import { openai } from "@ai-sdk/openai";
-import { generateObject, generateText } from "ai";
+import { generateObject, generateText, type ToolSet } from "ai";
 import { z } from "zod";
-import { addPerson, getPeople } from "./db";
-import {
-  addPersonTool,
-  getPeopleTool,
-  updatePersonByEmailTool,
-  getPersonByEmailTool,
-} from "./tools";
 
-export const createAgent = (prompt: string) => {
+export const createAgent = (prompt: string, tools: ToolSet) => {
   return async function Agent(
     req: AgentRequest,
     resp: AgentResponse,
@@ -18,17 +11,33 @@ export const createAgent = (prompt: string) => {
   ) {
     try {
       const data = await req.data.json();
-      const result = await generateText({
+      const result = await generateObject({
         model: openai("gpt-4o"),
-        prompt:
-          prompt +
-          `<payload>
+        prompt: `
+        You are an intelligent agent. Your task is to carefully read the following instructions and the provided JSON payload. 
+        Use the instructions to determine what information to extract from the payload and which tools to call. 
+        For each relevant action, select the most appropriate tool and provide the required arguments.
+
+        Instructions:
+        ${prompt}
+
+        Payload:
         ${JSON.stringify(data)}
-        </payload>`,
-        tools: { addPersonTool, updatePersonByEmailTool, getPersonByEmailTool },
-        maxSteps: 10,
+        
+        Based on the payload, decide which tools to call and with what arguments. Respond with an array in this format:
+        [
+          { tool: "toolName", args: { /* arguments */ } }
+        ]`,
+        schema: z.object({
+          toolCalls: z.array(
+            z.object({
+              tool: z.string(),
+              args: z.record(z.any()),
+            })
+          ),
+        }),
       });
-      return resp.text("DONE");
+      return resp.text(JSON.stringify(result.object));
     } catch (error) {
       ctx.logger.error("Error running agent:", error);
       return resp.text("Sorry, there was an error processing your request.");
