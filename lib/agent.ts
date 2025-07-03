@@ -35,104 +35,81 @@ export const createAgent = (prompt: string, tools: ToolSet) => {
     try {
       const data = await req.data.text();
       const executionLog = [];
+      const maxIterations = 10; // Safety limit to prevent infinite loops
+      let iteration = 0;
       
-      // Step 1: Determine initial tools to call (should be getPersonByEmail)
-      const initialToolsResult = await generateObject({
-        model: openai("gpt-4o"),
-        prompt: `
-        You are an intelligent agent. Your task is to carefully read the following instructions and the provided JSON payload. 
-        Based on the webhook data, determine the initial tools that need to be called.
-
-        Instructions:
-        ${prompt}
-
-        Payload:
-        ${data}
+      while (iteration < maxIterations) {
+        iteration++;
         
-        First, identify what tools should be called to gather information (like checking if a person exists).
-        Respond with an array in this format:
-        [
-          { tool: "toolName", args: { /* arguments */ } }
-        ]`,
-        schema: z.object({
-          toolCalls: z.array(
-            z.object({
-              tool: z.string(),
-              args: z.record(z.any()),
-            })
-          ),
-        }),
-      });
+        // Determine what tools need to be called next
+        const toolsResult: { object: { toolCalls: { tool: string; args: Record<string, any> }[] } } = await generateObject({
+          model: openai("gpt-4o"),
+          prompt: `
+          You are an intelligent agent. Your task is to carefully read the following instructions and determine what tools need to be called next.
 
-      // Step 2: Execute initial tools
-      for (const toolCall of initialToolsResult.object.toolCalls) {
-        const { tool, args } = toolCall;
-        if (toolExecutors[tool]) {
-          const convertedArgs = convertDatesToObjects(args);
-          const result = await toolExecutors[tool](convertedArgs);
-          executionLog.push({
-            tool,
-            args: convertedArgs,
-            result,
-          });
-          ctx.logger.info(`Executed tool ${tool} with result:`, result);
+          Instructions:
+          ${prompt}
+
+          Original Payload:
+          ${data}
+          
+          ${executionLog.length > 0 ? `Previous Execution Results:\n${JSON.stringify(executionLog, null, 2)}` : ''}
+          
+          Based on the ${executionLog.length > 0 ? 'previous execution results and the' : ''} original payload, determine what tools should be called next.
+          
+          ${executionLog.length === 0 ? 'This is the first iteration, so start with gathering information (like checking if a person exists).' : ''}
+          
+          If no more tools are needed, return an empty array.
+          
+          Respond with an array in this format:
+          [
+            { tool: "toolName", args: { /* arguments */ } }
+          ]`,
+          schema: z.object({
+            toolCalls: z.array(
+              z.object({
+                tool: z.string(),
+                args: z.record(z.any()),
+              })
+            ),
+          }),
+        });
+
+        // If no tools to call, we're done
+        if (toolsResult.object.toolCalls.length === 0) {
+          ctx.logger.info(`No more tools to call after ${iteration - 1} iterations`);
+          break;
+        }
+
+        // Execute the tools
+        for (const toolCall of toolsResult.object.toolCalls) {
+          const { tool, args }: { tool: string; args: Record<string, any> } = toolCall;
+          const toolExecutor = toolExecutors[tool as keyof typeof toolExecutors];
+          if (toolExecutor) {
+            const convertedArgs = convertDatesToObjects(args);
+            const result = await toolExecutor(convertedArgs);
+            executionLog.push({
+              tool,
+              args: convertedArgs,
+              result,
+            });
+            ctx.logger.info(`Iteration ${iteration}: Executed tool ${tool} with result:`, result);
+          } else {
+            ctx.logger.warn(`Unknown tool: ${tool}`);
+          }
         }
       }
 
-      // Step 3: Based on results, determine next tools to call
-      const followUpToolsResult = await generateObject({
-        model: openai("gpt-4o"),
-        prompt: `
-        You are an intelligent agent. Based on the initial tool execution results, determine what additional tools need to be called.
-
-        Instructions:
-        ${prompt}
-
-        Original Payload:
-        ${data}
-        
-        Execution Results:
-        ${JSON.stringify(executionLog, null, 2)}
-        
-        Based on the execution results, determine what additional tools should be called.
-        For example:
-        - If getPersonByEmail returned null/empty, call addPerson to create a new person
-        - If getPersonByEmail returned a person, call updatePersonByEmail to update their information
-        
-        Respond with an array in this format:
-        [
-          { tool: "toolName", args: { /* arguments */ } }
-        ]`,
-        schema: z.object({
-          toolCalls: z.array(
-            z.object({
-              tool: z.string(),
-              args: z.record(z.any()),
-            })
-          ),
-        }),
-      });
-
-      // Step 4: Execute follow-up tools
-      for (const toolCall of followUpToolsResult.object.toolCalls) {
-        const { tool, args } = toolCall;
-        if (toolExecutors[tool]) {
-          const convertedArgs = convertDatesToObjects(args);
-          const result = await toolExecutors[tool](convertedArgs);
-          executionLog.push({
-            tool,
-            args: convertedArgs,
-            result,
-          });
-          ctx.logger.info(`Executed tool ${tool} with result:`, result);
-        }
+      if (iteration >= maxIterations) {
+        ctx.logger.warn(`Reached maximum iterations (${maxIterations})`);
       }
 
       // Return the full execution log
       return resp.json({
         success: true,
         executionLog,
-        summary: `Executed ${executionLog.length} tools successfully`
+        iterations: iteration,
+        summary: `Executed ${executionLog.length} tools across ${iteration} iterations`
       });
       
     } catch (error) {
