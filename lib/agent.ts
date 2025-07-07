@@ -5,6 +5,8 @@ import { z } from "zod";
 import { toolExecutors } from "./tools";
 import { convertDatesToObjects } from "./helpers";
 
+const allowedToolsArr = Object.keys(toolExecutors);
+
 export const createAgent = (prompt: string, tools: ToolSet) => {
   return async function Agent(
     req: AgentRequest,
@@ -58,22 +60,39 @@ export const createAgent = (prompt: string, tools: ToolSet) => {
           model: openai("gpt-4o"),
           prompt: `
           You are the Judge.
-          • If the array of proposed calls is empty, respond {"decision":"approve"}.
-          • Otherwise, approve if every element looks like {"tool": <string>, "args": <object>}.
-            (You don't need to validate arg fields in detail.)
-          • Reject if anything is missing or obviously invalid.
         
-          Proposed calls:
+          **Context you must review**
+          1. Proposed tool calls for this iteration (below)
+          2. Full execution log so far (below)
+          3. The original webhook payload (below)
+        
+          **Allowed tools**
+          ${JSON.stringify(allowedToolsArr, null, 2)}
+        
+          **Approval rules**
+          • If the proposed array is empty → {"decision":"approve"}  
+          • Otherwise, approve only if every element looks like {"tool": <string>, "args": <object>}  
+            – The "tool" value must be one of the allowed tools above.  
+            – The call must NOT duplicate a successful call already in the execution log.  
+          • Reject if any call is malformed, duplicates prior work, or is obviously unnecessary.
+        
+          **Proposed calls**
           ${JSON.stringify(toolsResult.object.toolCalls, null, 2)}
         
-          Respond only with JSON.
+          **Execution log so far**
+          ${JSON.stringify(executionLog, null, 2)}
+        
+          **Original payload**
+          ${data}
+        
+          Respond only with JSON:
+          { "decision":"approve" | "reject", "reason":"optional explanation" }
           `,
           schema: z.object({
             decision: z.enum(["approve", "reject"]),
             reason: z.string().optional(),
           }),
-        });
-        
+        }); 
 
         if (judgeResult.object.decision === "reject") {
           ctx.logger.warn(`Judge rejected the toolCalls: ${judgeResult.object.reason}`);
