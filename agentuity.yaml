@@ -8,7 +8,7 @@
 # The version semver range required to run this project
 version: '>=0.0.155'
 # The ID of the project which is automatically generated
-project_id: proj_3c6428be34a4bb8b7b9ebf1dafdf684d
+project_id: proj_f850cce35ed500ddc0657ae5c0670ec0
 # The name of the project which is editable
 name: agent-crm
 # The description of the project which is editable
@@ -71,6 +71,8 @@ bundler:
 # The agents that are part of this project
 agents:
   - # The ID of the Agent which is automatically generated
-    id: agent_cd02e0fc61a6d07754955849ee6d0fc0
+    id: agent_fc14aff65b5e8de4048fd26e39518a08
     # The name of the Agent which is editable
     name: resend-agent
+  - id: agent_204c2413635a0cf5081b2d04b6e11c2c
+    name: clerk-agent
