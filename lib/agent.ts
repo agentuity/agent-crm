@@ -75,6 +75,40 @@ export const createAgent = (prompt: string, tools: ToolSet) => {
           }),
         });
 
+        const judgeResult = await generateObject({
+          model: openai("gpt-4o"),
+          prompt: `
+          You are the Judge.
+          • If the array of proposed calls is empty, respond {"decision":"approve"}.
+          • Otherwise, approve if every element looks like {"tool": <string>, "args": <object>}.
+            (You don't need to validate arg fields in detail.)
+          • Reject if anything is missing or obviously invalid.
+        
+          Proposed calls:
+          ${JSON.stringify(toolsResult.object.toolCalls, null, 2)}
+        
+          Respond only with JSON.
+          `,
+          schema: z.object({
+            decision: z.enum(["approve", "reject"]),
+            reason: z.string().optional(),
+          }),
+        });
+        
+
+        if (judgeResult.object.decision === "reject") {
+          ctx.logger.warn(`Judge rejected the toolCalls: ${judgeResult.object.reason}`);
+          return resp.json({
+            success: false,
+            error: "Sorry, the Judge rejected the toolCalls.",
+            details: judgeResult.object.reason
+          });
+        }
+
+        if (judgeResult.object.decision === "approve") {
+          ctx.logger.info(`Judge approved the toolCalls`);
+        }
+
         // If no tools to call, we're done
         if (toolsResult.object.toolCalls.length === 0) {
           ctx.logger.info(`No more tools to call after ${iteration - 1} iterations`);
@@ -93,7 +127,7 @@ export const createAgent = (prompt: string, tools: ToolSet) => {
               args: convertedArgs,
               result,
             });
-            ctx.logger.info(`Iteration ${iteration}: Executed tool ${tool} with result:`, result);
+            ctx.logger.info(`Iteration ${iteration}: Executed tool ${tool}`);
           } else {
             ctx.logger.warn(`Unknown tool: ${tool}`);
           }
