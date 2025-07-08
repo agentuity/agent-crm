@@ -6,7 +6,7 @@ import {
   getCompanyIDByPersonID,
   getCompanyByID,
   updateCompanyByID,
-} from "../../../lib/db";
+} from "../../../lib/attio";
 import fromZodSchema from "zod-to-json-schema";
 
 // Tool metadata

@@ -4,7 +4,7 @@ import {
   getPeople,
   updatePersonByEmail,
   getPersonByEmail,
-} from "./db";
+} from "./attio";
 import fromZodSchema from "zod-to-json-schema";
 
 // Tool metadata for LLM reasoning
