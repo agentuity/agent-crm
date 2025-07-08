@@ -1,6 +1,6 @@
 const ATTIO_AUTH_TOKEN = process.env.ATTIO_AUTH_TOKEN;
 
-async function request(method: string, path: string, body?: any) {
+export async function request(method: string, path: string, body?: any) {
   const url = `https://api.attio.com/v2${path}`;
   const res = await fetch(url, {
     method,
@@ -20,7 +20,7 @@ async function request(method: string, path: string, body?: any) {
 }
 
 // --- Type Definitions ---
-type PersonInfo = {
+export type PersonInfo = {
   firstName?: string;
   lastName?: string;
   email: string;
@@ -29,9 +29,9 @@ type PersonInfo = {
   leadSource?: string;
 };
 
-type OrgId = { id: string; name: string };
+export type OrgId = { id: string; name: string };
 
-type UpdateCompanyObject = {
+export type UpdateCompanyObject = {
   orgId?: OrgId;
   hasOnboarded?: boolean;
   creditsBought?: number;
@@ -40,12 +40,12 @@ type UpdateCompanyObject = {
 };
 
 // --- Utility/Helper Functions ---
-function getRecordIdFromRecord(record: any): string | null {
+export function getRecordIdFromRecord(record: any): string | null {
   return record?.data?.id?.record_id || null;
 }
 
 // --- Person-related Functions ---
-async function assertPerson(personInfo: PersonInfo): Promise<any> {
+export async function assertPerson(personInfo: PersonInfo): Promise<any> {
   // Always include email_addresses
   const values: any = {
     email_addresses: [
@@ -86,7 +86,7 @@ async function assertPerson(personInfo: PersonInfo): Promise<any> {
   );
 }
 
-async function getPersonByEmail(email: string): Promise<any> {
+export async function getPersonByEmail(email: string): Promise<any> {
   const body = {
     filter: {
       email_addresses: email,
@@ -95,7 +95,7 @@ async function getPersonByEmail(email: string): Promise<any> {
   return await request("POST", "/objects/people/records/query", body);
 }
 
-async function getPersonByClerkID(clerkId: string): Promise<any> {
+export async function getPersonByClerkID(clerkId: string): Promise<any> {
   // Assuming you have a custom attribute for Clerk ID
   const body = {
     filter: {
@@ -105,13 +105,13 @@ async function getPersonByClerkID(clerkId: string): Promise<any> {
   return await request("POST", "/objects/people/records/query", body);
 }
 
-async function getPersonByRecordID(recordId: string): Promise<any> {
+export async function getPersonByRecordID(recordId: string): Promise<any> {
   const person = await request("GET", `/objects/people/records/${recordId}`);
   return person;
 }
 
 // --- Company-related Functions ---
-async function getCompanyByRecordID(recordId: string): Promise<any> {
+export async function getCompanyByRecordID(recordId: string): Promise<any> {
   const company = await request(
     "GET",
     `/objects/companies/records/${recordId}`
@@ -119,7 +119,7 @@ async function getCompanyByRecordID(recordId: string): Promise<any> {
   return company;
 }
 
-async function getCompanyByPersonEmail(email: string): Promise<any> {
+export async function getCompanyByPersonEmail(email: string): Promise<any> {
   const person = await getPersonByEmail(email);
   console.log("Person object:", person);
   const companyId = person.data[0]?.values?.company[0]?.target_record_id;
@@ -132,7 +132,7 @@ async function getCompanyByPersonEmail(email: string): Promise<any> {
   return company;
 }
 
-async function updateCompany(
+export async function updateCompany(
   companyId: string,
   updateObject: UpdateCompanyObject
 ): Promise<any> {
