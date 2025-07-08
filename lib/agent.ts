@@ -5,7 +5,7 @@ import { z } from "zod";
 import { toolExecutors } from "./tools";
 import { convertDatesToObjects } from "./helpers";
 
-const allowedToolsArr = Object.keys(toolExecutors);
+const allowedToolsArr: string[] = [];
 
 export const createAgent = (prompt: string, tools: ToolSet) => {
   return async function Agent(
@@ -18,12 +18,14 @@ export const createAgent = (prompt: string, tools: ToolSet) => {
       const executionLog = [];
       const maxIterations = 10; // Safety limit to prevent infinite loops
       let iteration = 0;
-      
+
       while (iteration < maxIterations) {
         iteration++;
-        
+
         // Determine what tools need to be called next
-        const toolsResult: { object: { toolCalls: { tool: string; args: Record<string, any> }[] } } = await generateObject({
+        const toolsResult: {
+          object: { toolCalls: { tool: string; args: Record<string, any> }[] };
+        } = await generateObject({
           model: openai("gpt-4o"),
           prompt: `
           You are an intelligent agent. Your task is to carefully read the following instructions and determine what tools need to be called next.
@@ -33,15 +35,29 @@ export const createAgent = (prompt: string, tools: ToolSet) => {
 
           Original Payload:
           ${data}
-          
-          ${executionLog.length > 0 ? `Previous Execution Results:\n${JSON.stringify(executionLog, null, 2)}` : ''}
-          
-          Based on the ${executionLog.length > 0 ? 'previous execution results and the' : ''} original payload, determine what tools should be called next.
-          
-          ${executionLog.length === 0 ? 'This is the first iteration, so start with gathering information (like checking if a person exists).' : ''}
-          
+
+          ${
+            executionLog.length > 0
+              ? `Previous Execution Results:\n${JSON.stringify(
+                  executionLog,
+                  null,
+                  2
+                )}`
+              : ""
+          }
+
+          Based on the ${
+            executionLog.length > 0 ? "previous execution results and the" : ""
+          } original payload, determine what tools should be called next.
+
+          ${
+            executionLog.length === 0
+              ? "This is the first iteration, so start with gathering information (like checking if a person exists)."
+              : ""
+          }
+
           If no more tools are needed, return an empty array.
-          
+
           Respond with an array in this format:
           [
             { tool: "toolName", args: { /* arguments */ } }
@@ -60,31 +76,31 @@ export const createAgent = (prompt: string, tools: ToolSet) => {
           model: openai("gpt-4o"),
           prompt: `
           You are the Judge.
-        
+
           **Context you must review**
           1. Proposed tool calls for this iteration (below)
           2. Full execution log so far (below)
           3. The original webhook payload (below)
-        
+
           **Allowed tools**
           ${JSON.stringify(allowedToolsArr, null, 2)}
-        
+
           **Approval rules**
-          • If the proposed array is empty → {"decision":"approve"}  
-          • Otherwise, approve only if every element looks like {"tool": <string>, "args": <object>}  
-            – The "tool" value must be one of the allowed tools above.  
-            – The call must NOT duplicate a successful call already in the execution log.  
+          • If the proposed array is empty → {"decision":"approve"}
+          • Otherwise, approve only if every element looks like {"tool": <string>, "args": <object>}
+            – The "tool" value must be one of the allowed tools above.
+            – The call must NOT duplicate a successful call already in the execution log.
           • Reject if any call is malformed, duplicates prior work, or is obviously unnecessary.
-        
+
           **Proposed calls**
           ${JSON.stringify(toolsResult.object.toolCalls, null, 2)}
-        
+
           **Execution log so far**
           ${JSON.stringify(executionLog, null, 2)}
-        
+
           **Original payload**
           ${data}
-        
+
           Respond only with JSON:
           { "decision":"approve" | "reject", "reason":"optional explanation" }
           `,
@@ -92,14 +108,16 @@ export const createAgent = (prompt: string, tools: ToolSet) => {
             decision: z.enum(["approve", "reject"]),
             reason: z.string().optional(),
           }),
-        }); 
+        });
 
         if (judgeResult.object.decision === "reject") {
-          ctx.logger.warn(`Judge rejected the toolCalls: ${judgeResult.object.reason}`);
+          ctx.logger.warn(
+            `Judge rejected the toolCalls: ${judgeResult.object.reason}`
+          );
           return resp.json({
             success: false,
             error: "Sorry, the Judge rejected the toolCalls.",
-            details: judgeResult.object.reason
+            details: judgeResult.object.reason,
           });
         }
 
@@ -109,14 +127,18 @@ export const createAgent = (prompt: string, tools: ToolSet) => {
 
         // If no tools to call, we're done
         if (toolsResult.object.toolCalls.length === 0) {
-          ctx.logger.info(`No more tools to call after ${iteration - 1} iterations`);
+          ctx.logger.info(
+            `No more tools to call after ${iteration - 1} iterations`
+          );
           break;
         }
 
         // Execute the tools
         for (const toolCall of toolsResult.object.toolCalls) {
-          const { tool, args }: { tool: string; args: Record<string, any> } = toolCall;
-          const toolExecutor = toolExecutors[tool as keyof typeof toolExecutors];
+          const { tool, args }: { tool: string; args: Record<string, any> } =
+            toolCall;
+          const toolExecutor =
+            toolExecutors[tool as keyof typeof toolExecutors];
           if (toolExecutor) {
             const convertedArgs = convertDatesToObjects(args);
             const result = await toolExecutor(convertedArgs);
@@ -141,15 +163,14 @@ export const createAgent = (prompt: string, tools: ToolSet) => {
         success: true,
         executionLog,
         iterations: iteration,
-        summary: `Executed ${executionLog.length} tools across ${iteration} iterations`
+        summary: `Executed ${executionLog.length} tools across ${iteration} iterations`,
       });
-      
     } catch (error) {
       ctx.logger.error("Error running agent:", error);
       return resp.json({
         success: false,
         error: "Sorry, there was an error processing your request.",
-        details: error instanceof Error ? error.message : String(error)
+        details: error instanceof Error ? error.message : String(error),
       });
     }
   };

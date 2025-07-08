@@ -6,9 +6,9 @@
 # ------------------------------------------------
 
 # The version semver range required to run this project
-version: '>=0.0.155'
+version: ">=0.0.155"
 # The ID of the project which is automatically generated
-project_id: proj_f850cce35ed500ddc0657ae5c0670ec0
+project_id: proj_6eb8120ba6a8dea0480bbd4fd1476abb
 # The name of the project which is editable
 name: agent-crm
 # The description of the project which is editable
@@ -65,14 +65,14 @@ bundler:
   agents:
     dir: src/agents
   ignore:
-    - '**/*'
-    - '!/.agentuity/**'
-    - '!/agentuity.yaml'
+    - "**/*"
+    - "!/.agentuity/**"
+    - "!/agentuity.yaml"
 # The agents that are part of this project
 agents:
   - # The ID of the Agent which is automatically generated
-    id: agent_fc14aff65b5e8de4048fd26e39518a08
+    id: agent_e1831783584746820f75720815f18f28
     # The name of the Agent which is editable
     name: resend-agent
-  - id: agent_204c2413635a0cf5081b2d04b6e11c2c
+  - id: agent_0818479bc2c2cc070fa6cf14816e8442
     name: clerk-agent
