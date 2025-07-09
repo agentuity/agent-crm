@@ -4,7 +4,15 @@ import { generateObject } from "ai";
 import { z } from "zod";
 import { convertDatesToObjects } from "./helpers";
 
-export const createAgent = (prompt: string, tools: Record<string, Function>) => { // tools is a map of tool names to functions
+export const createAgent = (
+  prompt: string,
+  toolMetadata: Record<
+    string,
+    { description: string; parameters: z.ZodObject<any> }
+  >,
+  toolExecutors: Record<string, Function>
+) => {
+  // tools is a map of tool names to functions
   return async function Agent(
     req: AgentRequest,
     resp: AgentResponse,
@@ -12,6 +20,7 @@ export const createAgent = (prompt: string, tools: Record<string, Function>) => 
   ) {
     try {
       const allowedToolsArr = Object.keys(tools); // pull the list of tool names once so the Judge knows whats legal
+      ctx.logger.info(`Allowed tools: ${allowedToolsArr.join(", ")}`);
       const data = await req.data.text();
       const executionLog = [];
       const maxIterations = 10; // Safety limit to prevent infinite loops
@@ -56,10 +65,12 @@ export const createAgent = (prompt: string, tools: Record<string, Function>) => 
 
           If no more tools are needed, return an empty array.
 
-          Respond with an array in this format:
-          [
-            { tool: "toolName", args: { /* arguments */ } }
-          ]`,
+          Respond with an object in this format:
+          {
+            toolCalls: [
+              { tool: "toolName", args: { /* arguments */ } }
+            ]
+          }`,
           schema: z.object({
             toolCalls: z.array(
               z.object({
@@ -70,6 +81,15 @@ export const createAgent = (prompt: string, tools: Record<string, Function>) => 
           }),
         });
 
+        ctx.logger.info(
+          `ToolsResult: ${JSON.stringify(
+            toolsResult.object.toolCalls,
+            null,
+            2
+          )}`
+        );
+        const allowedToolsBlock =
+          "```json\n" + JSON.stringify(allowedToolsArr, null, 2) + "\n```";
         const judgeResult = await generateObject({
           model: openai("gpt-4o"),
           prompt: `
@@ -81,14 +101,15 @@ export const createAgent = (prompt: string, tools: Record<string, Function>) => 
           3. The original webhook payload (below)
 
           **Allowed tools**
-          ${JSON.stringify(allowedToolsArr, null, 2)}
+          ${allowedToolsBlock}
 
           **Approval rules**
           • If the proposed array is empty → {"decision":"approve"}
           • Otherwise, approve only if every element looks like {"tool": <string>, "args": <object>}
-            – The "tool" value must be one of the allowed tools above.
+            – The "tool" value must be one of the allowed tools above (ignore spacing).
             – The call must NOT duplicate a successful call already in the execution log.
           • Reject if any call is malformed, duplicates prior work, or is obviously unnecessary.
+          You can always allow the pingSlack tool.
 
           **Proposed calls**
           ${JSON.stringify(toolsResult.object.toolCalls, null, 2)}
@@ -100,7 +121,7 @@ export const createAgent = (prompt: string, tools: Record<string, Function>) => 
           ${data}
 
           Respond only with JSON:
-          { "decision":"approve" | "reject", "reason":"optional explanation" }
+          { "decision":"approve" | "reject", "reason":"optional explanation, please list all the allowed tools here if you deem a tool call unallowed" }
           `,
           schema: z.object({
             decision: z.enum(["approve", "reject"]),
