@@ -9,7 +9,7 @@ export const createAgent = (
   toolMetadata: {
     name: string;
     description: string;
-    parameters: z.ZodObject<any>;
+    parameters: any;
   }[],
   toolExecutors: Record<string, Function>
 ) => {
