@@ -6,13 +6,11 @@ import { convertDatesToObjects } from "./helpers";
 
 export const createAgent = (
   prompt: string,
-  toolMetadata: [
-    {
-      name: string;
-      description: string;
-      parameters: z.ZodObject<any>;
-    }
-  ],
+  toolMetadata: {
+    name: string;
+    description: string;
+    parameters: z.ZodObject<any>;
+  }[],
   toolExecutors: Record<string, Function>
 ) => {
   // tools is a map of tool names to functions
