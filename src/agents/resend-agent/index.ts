@@ -1,4 +1,4 @@
-import { createAgent } from "../../../lib/agent";
+import type { AgentRequest, AgentResponse, AgentContext } from "@agentuity/sdk";
 
 const prompt = `
 You are processing email webhook events from Resend. Your job is to manage people in the attio_mockup table based on email interactions.
@@ -50,4 +50,10 @@ Email webhooks have this structure:
 - Always use the webhook's created_at timestamp for date fields
 `;
 
-export default createAgent(prompt, {});
+export async function Agent(
+  req: AgentRequest,
+  resp: AgentResponse,
+  ctx: AgentContext
+) {
+  return resp.text("hello from resend agent");
+}

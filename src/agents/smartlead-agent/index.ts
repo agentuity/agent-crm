@@ -1,6 +1,6 @@
 import type { AgentContext, AgentRequest, AgentResponse } from "@agentuity/sdk";
 import { createAgent } from "../../../lib/agent";
-import { toolExecutors } from "./tools";
+import { toolExecutors, toolMetadataList } from "./tools";
 
 const prompt = `
 You are receiving email webhooks from SmartLead. You are responsible for managing people in Attio based on email interactions.
@@ -45,4 +45,4 @@ If the event_type is EMAIL_REPLY, you should:
       - USAGE: pingSlack(["U08993W8V0T" or "U088UL77GDV"], from_email, to_email)
 `;
 
-export default createAgent(prompt, toolExecutors);
+export default createAgent(prompt, toolMetadataList, toolExecutors);
