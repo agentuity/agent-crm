@@ -6,7 +6,7 @@
 # ------------------------------------------------
 
 # The version semver range required to run this project
-version: ">=0.0.155"
+version: '>=0.0.155'
 # The ID of the project which is automatically generated
 project_id: proj_6eb8120ba6a8dea0480bbd4fd1476abb
 # The name of the project which is editable
@@ -65,9 +65,9 @@ bundler:
   agents:
     dir: src/agents
   ignore:
-    - "**/*"
-    - "!/.agentuity/**"
-    - "!/agentuity.yaml"
+    - '**/*'
+    - '!/.agentuity/**'
+    - '!/agentuity.yaml'
 # The agents that are part of this project
 agents:
   - # The ID of the Agent which is automatically generated
@@ -76,3 +76,6 @@ agents:
     name: resend-agent
   - id: agent_0818479bc2c2cc070fa6cf14816e8442
     name: clerk-agent
+  - id: agent_2f0720ffe817764ca48a02af17a2cd2e
+    name: payload-logger-agent
+    description: logs payloads sent to it
