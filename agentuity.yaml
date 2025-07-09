@@ -76,5 +76,11 @@ agents:
     name: resend-agent
   - id: agent_0818479bc2c2cc070fa6cf14816e8442
     name: clerk-agent
+
+  - id: agent_2f0720ffe817764ca48a02af17a2cd2e
+    name: payload-logger-agent
+    description: logs payloads sent to it
+
   - id: agent_808e565a5edf05bb76f386e415682bce
     name: smartlead-agent
+
