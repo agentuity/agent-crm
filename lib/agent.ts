@@ -90,8 +90,6 @@ export const createAgent = (
             2
           )}`
         );
-        const allowedToolsBlock =
-          "```json\n" + JSON.stringify(allowedToolsArr, null, 2) + "\n```";
         const judgeResult = await generateObject({
           model: openai("gpt-4o"),
           prompt: `
@@ -150,7 +148,7 @@ export const createAgent = (
         for (const toolCall of toolsResult.object.toolCalls) {
           const { tool, args }: { tool: string; args: Record<string, any> } =
             toolCall;
-          const toolExecutor = tools[tool]; // at runtime look up the concrete function for the requested tool
+          const toolExecutor = toolExecutors[tool]; // at runtime look up the concrete function for the requested tool
           if (toolExecutor) {
             const convertedArgs = convertDatesToObjects(args);
             const result = await toolExecutor(convertedArgs);
