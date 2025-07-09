@@ -4,14 +4,23 @@ import { generateObject } from "ai";
 import { z } from "zod";
 import { convertDatesToObjects } from "./helpers";
 
-export const createAgent = (prompt: string, tools: Record<string, Function>) => { // tools is a map of tool names to functions
+export const createAgent = (
+  prompt: string,
+  toolMetadata: {
+    name: string;
+    description: string;
+    parameters: any;
+  }[],
+  toolExecutors: Record<string, Function>
+) => {
+  // tools is a map of tool names to functions
   return async function Agent(
     req: AgentRequest,
     resp: AgentResponse,
     ctx: AgentContext
   ) {
     try {
-      const allowedToolsArr = Object.keys(tools); // pull the list of tool names once so the Judge knows whats legal
+      const allowedToolsArr = Object.keys(toolExecutors); // pull the list of tool names once so the Judge knows whats legal
       const data = await req.data.text();
       const executionLog = [];
       const maxIterations = 10; // Safety limit to prevent infinite loops
@@ -56,6 +65,9 @@ export const createAgent = (prompt: string, tools: Record<string, Function>) => 
 
           If no more tools are needed, return an empty array.
 
+          **Allowed tools**
+          ${JSON.stringify(toolMetadata, null, 2)}
+
           Respond with an array in this format:
           [
             { tool: "toolName", args: { /* arguments */ } }
@@ -70,37 +82,37 @@ export const createAgent = (prompt: string, tools: Record<string, Function>) => 
           }),
         });
 
+        ctx.logger.info(
+          `ToolsResult: ${JSON.stringify(
+            toolsResult.object.toolCalls,
+            null,
+            2
+          )}`
+        );
         const judgeResult = await generateObject({
           model: openai("gpt-4o"),
           prompt: `
-          You are the Judge.
+          You are the Judge. You are given an array of tool calls of the form:
+          { tool: "toolName", args: { /* arguments */ } }
+          
+          And a list of allowed tools and their parameters.
 
-          **Context you must review**
-          1. Proposed tool calls for this iteration (below)
-          2. Full execution log so far (below)
-          3. The original webhook payload (below)
-
-          **Allowed tools**
-          ${JSON.stringify(allowedToolsArr, null, 2)}
+          You must approve or reject the tool calls.
 
           **Approval rules**
-          • If the proposed array is empty → {"decision":"approve"}
-          • Otherwise, approve only if every element looks like {"tool": <string>, "args": <object>}
-            – The "tool" value must be one of the allowed tools above.
-            – The call must NOT duplicate a successful call already in the execution log.
-          • Reject if any call is malformed, duplicates prior work, or is obviously unnecessary.
+          - Make sure that the tool calls are in the correct format.
+          - Make sure that the proposed tool calls are within the allowed tools.
+          - Make sure that the proposed tool calls use the correct arguments for the tool.
+          - Make sure that the proposed tool calls are not dangerous.
+
+          **Allowed tools**
+          ${JSON.stringify(toolMetadata, null, 2)}
 
           **Proposed calls**
           ${JSON.stringify(toolsResult.object.toolCalls, null, 2)}
 
-          **Execution log so far**
-          ${JSON.stringify(executionLog, null, 2)}
-
-          **Original payload**
-          ${data}
-
           Respond only with JSON:
-          { "decision":"approve" | "reject", "reason":"optional explanation" }
+          { "decision":"approve" | "reject", "reason":"optional explanation, please list all the allowed tools here if you deem a tool call unallowed" }
           `,
           schema: z.object({
             decision: z.enum(["approve", "reject"]),
@@ -135,7 +147,9 @@ export const createAgent = (prompt: string, tools: Record<string, Function>) => 
         for (const toolCall of toolsResult.object.toolCalls) {
           const { tool, args }: { tool: string; args: Record<string, any> } =
             toolCall;
-          const toolExecutor = tools[tool]; // at runtime look up the concrete function for the requested tool
+
+          const toolExecutor = toolExecutors[tool]; // at runtime look up the concrete function for the requested tool
+
           if (toolExecutor) {
             const convertedArgs = convertDatesToObjects(args);
             const result = await toolExecutor(convertedArgs);
