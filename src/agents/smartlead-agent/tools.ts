@@ -15,11 +15,6 @@ export const tools = [
     parameters: z.object({ email: z.string() }),
   },
   {
-    name: "getPersonByClerkID",
-    description: "Get a person by their Clerk ID",
-    parameters: z.object({ clerkId: z.string() }),
-  },
-  {
     name: "getPersonByRecordID",
     description: "Get a person by their Attio record ID",
     parameters: z.object({ recordId: z.string() }),
@@ -35,11 +30,6 @@ export const tools = [
       accountCreationDate: z.string().optional(),
       leadSource: z.string().optional(),
     }),
-  },
-  {
-    name: "getCompanyByRecordID",
-    description: "Get a company by their Attio record ID",
-    parameters: z.object({ recordId: z.string() }),
   },
   {
     name: "updateCompany",
@@ -67,17 +57,11 @@ export const toolExecutors: Record<string, Function> = {
     const company = await attio.getCompanyByPersonEmail(email);
     return company;
   },
-  getPersonByClerkID: async ({ clerkId }: { clerkId: string }) => {
-    return await attio.getPersonByClerkID(clerkId);
-  },
   getPersonByRecordID: async ({ recordId }: { recordId: string }) => {
     return await attio.getPersonByRecordID(recordId);
   },
   assertPerson: async (personInfo: attio.PersonInfo) => {
     return await attio.assertPerson(personInfo);
-  },
-  getCompanyByRecordID: async ({ recordId }: { recordId: string }) => {
-    return await attio.getCompanyByRecordID(recordId);
   },
   updateCompany: async ({
     companyId,
