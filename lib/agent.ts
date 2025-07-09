@@ -83,6 +83,15 @@ export const createAgent = (
           }),
         });
 
+        ctx.logger.info(
+          `ToolsResult: ${JSON.stringify(
+            toolsResult.object.toolCalls,
+            null,
+            2
+          )}`
+        );
+        const allowedToolsBlock =
+          "```json\n" + JSON.stringify(allowedToolsArr, null, 2) + "\n```";
         const judgeResult = await generateObject({
           model: openai("gpt-4o"),
           prompt: `
@@ -106,7 +115,7 @@ export const createAgent = (
           ${JSON.stringify(toolsResult.object.toolCalls, null, 2)}
 
           Respond only with JSON:
-          { "decision":"approve" | "reject", "reason":"optional explanation" }
+          { "decision":"approve" | "reject", "reason":"optional explanation, please list all the allowed tools here if you deem a tool call unallowed" }
           `,
           schema: z.object({
             decision: z.enum(["approve", "reject"]),
