@@ -20,6 +20,7 @@ export const createAgent = (
     ctx: AgentContext
   ) {
     try {
+      const allowedToolsArr = Object.keys(toolExecutors); // pull the list of tool names once so the Judge knows whats legal
       const data = await req.data.text();
       const executionLog = [];
       const maxIterations = 10; // Safety limit to prevent infinite loops
@@ -146,7 +147,9 @@ export const createAgent = (
         for (const toolCall of toolsResult.object.toolCalls) {
           const { tool, args }: { tool: string; args: Record<string, any> } =
             toolCall;
+
           const toolExecutor = toolExecutors[tool]; // at runtime look up the concrete function for the requested tool
+
           if (toolExecutor) {
             const convertedArgs = convertDatesToObjects(args);
             const result = await toolExecutor(convertedArgs);
