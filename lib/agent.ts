@@ -1,19 +1,17 @@
 import type { AgentContext, AgentRequest, AgentResponse } from "@agentuity/sdk";
 import { openai } from "@ai-sdk/openai";
-import { generateObject, generateText, type ToolSet } from "ai";
+import { generateObject } from "ai";
 import { z } from "zod";
-import { toolExecutors } from "./tools";
 import { convertDatesToObjects } from "./helpers";
 
-const allowedToolsArr: string[] = [];
-
-export const createAgent = (prompt: string, tools: ToolSet) => {
+export const createAgent = (prompt: string, tools: Record<string, Function>) => { // tools is a map of tool names to functions
   return async function Agent(
     req: AgentRequest,
     resp: AgentResponse,
     ctx: AgentContext
   ) {
     try {
+      const allowedToolsArr = Object.keys(tools); // pull the list of tool names once so the Judge knows whats legal
       const data = await req.data.text();
       const executionLog = [];
       const maxIterations = 10; // Safety limit to prevent infinite loops
@@ -137,8 +135,7 @@ export const createAgent = (prompt: string, tools: ToolSet) => {
         for (const toolCall of toolsResult.object.toolCalls) {
           const { tool, args }: { tool: string; args: Record<string, any> } =
             toolCall;
-          const toolExecutor =
-            toolExecutors[tool as keyof typeof toolExecutors];
+          const toolExecutor = tools[tool]; // at runtime look up the concrete function for the requested tool
           if (toolExecutor) {
             const convertedArgs = convertDatesToObjects(args);
             const result = await toolExecutor(convertedArgs);
