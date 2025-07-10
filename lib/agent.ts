@@ -82,13 +82,6 @@ export const createAgent = (
           }),
         });
 
-        ctx.logger.info(
-          `ToolsResult: ${JSON.stringify(
-            toolsResult.object.toolCalls,
-            null,
-            2
-          )}`
-        );
         const judgeResult = await generateObject({
           model: openai("gpt-4o"),
           prompt: `

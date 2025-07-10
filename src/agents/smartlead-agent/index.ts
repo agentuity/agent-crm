@@ -22,23 +22,13 @@ If the event_type is EMAIL_REPLY, the webhook will contain the following importa
 - reply_message.html: The body of the email reply
 
 ## Available Tools
-
-- getPersonByEmail: Get a person from Attio by their email
-  - parameters: email (string)
-- getCompanyByPersonEmail: Get a company from Attio by the email of a person
-  - parameters: email (string)
-- getPersonByRecordID: Get a person from Attio by their Attio record ID
-  - parameters: recordId (string)
-- assertPerson: Assert a person in Attio
-  - parameters: firstName (string, optional), lastName (string, optional), email (string), userId (string, optional), accountCreationDate (string, optional), leadSource (string, optional)
-- updateCompany: Update a company in Attio
-  - parameters: companyId (string), updateObject (object: orgId (object: id (string), name (string), optional), hasOnboarded (boolean, optional), creditsBought (number, optional), lastCreditPurchase (string, optional), accountCreationDate (string, optional))
-- pingSlack: Ping the #yay Slack channel
-  - parameters: personToPing (string), inbox (string), fromEmail (string)
+${JSON.stringify(toolMetadataList, null, 2)}
 
 ## Workflow
 If the event_type is LEAD_CATEGORY_UPDATED, you should:
-  - do nothing.
+  1. use the assertPerson tool to assert the person in Attio.
+  2. use the getCompanyByPersonEmail tool to get the company from Attio.
+  -
 If the event_type is EMAIL_REPLY, you should:
   - use the pingSlack tool to ping the person who sent the original email 
   ("U08993W8V0T" if the email address is for Jeff Haynie or "U088UL77GDV" if the email address is for Rick Blalock. if you can't tell use "U08993W8V0T")
