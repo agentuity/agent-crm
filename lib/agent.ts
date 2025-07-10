@@ -68,10 +68,27 @@ export const createAgent = (
           **Allowed tools**
           ${JSON.stringify(toolMetadata, null, 2)}
 
-          Respond with an array in this format:
-          [
-            { tool: "toolName", args: { /* arguments */ } }
-          ]`,
+          CRITICAL: You must respond with a JSON object containing a "toolCalls" array. Each tool call MUST have both "tool" and "args" fields.
+
+          Required format:
+          {
+            "toolCalls": [
+              { 
+                "tool": "toolName", 
+                "args": { "param1": "value1", "param2": "value2" } 
+              }
+            ]
+          }
+
+          IMPORTANT:
+          - The "args" field is MANDATORY, even if empty: "args": {}
+          - Use the exact parameter names from the tool metadata
+          - If no tools are needed, return: { "toolCalls": [] }
+
+          Examples:
+          - { "toolCalls": [{ "tool": "getPersonByEmail", "args": { "email": "user@example.com" } }] }
+          - { "toolCalls": [{ "tool": "assertPerson", "args": { "email": "user@example.com", "firstName": "John" } }] }
+          - { "toolCalls": [] }`,
           schema: z.object({
             toolCalls: z.array(
               z.object({
