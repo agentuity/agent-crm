@@ -165,6 +165,26 @@ export async function updateCompany(
   );
 }
 
+export async function addCompanyToPipeLine(
+  companyRecordId: string,
+  personRecordId: string,
+  companyName: string
+): Promise<any> {
+  const body = {
+    data: {
+      values: {
+        name: `Deal with ${companyName}`,
+        stage: "Lead",
+        owner: "nmirigliani@agentuity.com",
+        value: 0,
+        associated_people: [personRecordId],
+        associated_company: companyRecordId,
+      },
+    },
+  };
+  return await request("POST", "/objects/deals/records", body);
+}
+
 // // --- Main/Test Code ---
 // await assertPerson({
 //   email: "sue@gmail.com",
