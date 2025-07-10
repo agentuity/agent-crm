@@ -77,6 +77,7 @@ export const toolExecutors: Record<string, Function> = {
       console.log("Lead is not positive, skipping.");
       return;
     }
+    console.log("Lead is positive, pinging Slack.");
 
     // Ping Slack
     const webhookUrl = process.env.SLACK_WEBHOOK;
