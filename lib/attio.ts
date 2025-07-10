@@ -29,10 +29,10 @@ export type PersonInfo = {
   leadSource?: string;
 };
 
-export type OrgId = { id: string; name: string };
+// export type OrgId = { id: string; name: string };
 
 export type UpdateCompanyObject = {
-  orgId?: OrgId;
+  orgId?: string;
   hasOnboarded?: boolean;
   creditsBought?: number;
   lastCreditPurchase?: string; // timestamp
@@ -42,6 +42,14 @@ export type UpdateCompanyObject = {
 // --- Utility/Helper Functions ---
 export function getRecordIdFromRecord(record: any): string | null {
   return record?.data?.id?.record_id || null;
+}
+
+export function getRecordIdFromCompany(company: any): string | null {
+  return company?.data?.id?.record_id || null;
+}
+
+export function getRecordIdFromPerson(person: any): string | null {
+  return person?.data[0]?.id?.record_id || null;
 }
 
 // --- Person-related Functions ---
@@ -121,14 +129,14 @@ export async function getCompanyByRecordID(recordId: string): Promise<any> {
 
 export async function getCompanyByPersonEmail(email: string): Promise<any> {
   const person = await getPersonByEmail(email);
-  console.log("Person object:", person);
+  // console.log("Person object:", person);
   const companyId = person.data[0]?.values?.company[0]?.target_record_id;
   if (!companyId) {
     return null;
   }
-  console.log("Extracted companyId:", companyId);
+  // console.log("Extracted companyId:", companyId);
   const company = await getCompanyByRecordID(companyId);
-  console.log("Company object:", company);
+  // console.log("Company object:", company);
   return company;
 }
 
@@ -139,7 +147,7 @@ export async function updateCompany(
   // Build values object dynamically, only including fields that exist
   const values: any = {};
   if (updateObject.orgId) {
-    values.org_id = updateObject.orgId.id;
+    values.org_id = updateObject.orgId;
   }
   if (typeof updateObject.hasOnboarded === "boolean") {
     values.has_onboarded = updateObject.hasOnboarded;

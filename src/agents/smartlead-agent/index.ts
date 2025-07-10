@@ -21,18 +21,23 @@ If the event_type is EMAIL_REPLY, the webhook will contain the following importa
 - to_name: The name of the potential lead
 - reply_message.html: The body of the email reply
 
-## Available Tools
-${JSON.stringify(toolMetadataList, null, 2)}
+## Workflow - you should only do one of these two tool calls.
 
-## Workflow
+You MUST fill out all parameters for each tool call.
+
 If the event_type is LEAD_CATEGORY_UPDATED, you should:
-  1. use the assertPerson tool to assert the person in Attio.
-  2. use the getCompanyByPersonEmail tool to get the company from Attio.
-  -
+  - call the lead_category_updated tool with the following parameters:
+    lead_email: lead_data.email
+    lead_first_name: lead_data.first_name
+    lead_last_name: lead_data.last_name
+    lead_company_name: lead_data.company_name
+
 If the event_type is EMAIL_REPLY, you should:
-  - use the pingSlack tool to ping the person who sent the original email 
-  ("U08993W8V0T" if the email address is for Jeff Haynie or "U088UL77GDV" if the email address is for Rick Blalock. if you can't tell use "U08993W8V0T")
-      - USAGE: pingSlack(["U08993W8V0T" or "U088UL77GDV"], from_email, to_email)
+  - call the email_replied tool with the following parameters:
+    from_email: from_email
+    to_email: to_email
+    to_name: to_name
+    slack_user_id: ("U08993W8V0T" if you think the from_email is Jeff Haynie's, "U088UL77GDV" if you think the from_email is for Rick Blalock's, or "U08993W8V0T" if you can't tell)
 `;
 
 export default createAgent(prompt, toolMetadataList, toolExecutors);
