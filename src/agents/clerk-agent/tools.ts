@@ -58,6 +58,15 @@ export const toolMetadata = [
       updateObject: "object",
     },
   },
+  {
+    name: "addOrgToCompany",
+    description: "Add an organization to a company's orgId field (handles string concatenation)",
+    parameters: {
+      companyId: "string",
+      orgName: "string",
+      orgId: "string",
+    },
+  },
 ];
 
 // Original zod-based tools (kept for reference/validation if needed)
@@ -105,12 +114,21 @@ export const tools = [
       parameters: z.object({
         companyId: z.string(),
         updateObject: z.object({
-          orgId: z.object({ id: z.string(), name: z.string() }).optional(),
+          orgId: z.string().optional(), // Changed from object to string
           hasOnboarded: z.boolean().optional(),
           creditsBought: z.number().optional(),
           lastCreditPurchase: z.string().optional(),
           accountCreationDate: z.string().optional(),
         }),
+      }),
+    },
+    {
+      name: "addOrgToCompany",
+      description: "Add an organization to a company's orgId field",
+      parameters: z.object({
+        companyId: z.string(),
+        orgName: z.string(),
+        orgId: z.string(),
       }),
     },
   ];
@@ -144,5 +162,27 @@ export const tools = [
       updateObject: attio.UpdateCompanyObject;
     }) => {
       return await attio.updateCompany(companyId, updateObject);
+    },
+    addOrgToCompany: async ({
+      companyId,
+      orgName,
+      orgId,
+    }: {
+      companyId: string;
+      orgName: string;
+      orgId: string;
+    }) => {
+      // First get the current company to check existing orgId
+      const company = await attio.getCompanyByRecordID(companyId);
+      // Extract the actual string value from Attio's attribute structure
+      const currentOrgId = company?.data?.values?.org_id?.[0]?.value || null;
+      
+      // Add the new org to the string
+      const updatedOrgId = attio.addOrgToOrgIdString(currentOrgId, orgName, orgId);
+      
+      // Update the company with the new orgId string
+      const result = await attio.updateCompany(companyId, { orgId: updatedOrgId });
+      
+      return result;
     },
   };
