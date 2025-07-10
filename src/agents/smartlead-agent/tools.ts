@@ -7,52 +7,62 @@ export const toolMetadataList = [
   {
     name: "getPersonByEmail",
     description: "Get a person from Attio by their email",
-    parameters: z.object({ email: z.string() }),
+    parameters: { email: "string" },
   },
   {
     name: "getCompanyByPersonEmail",
     description: "Get a company from Attio by the email of a person",
-    parameters: z.object({ email: z.string() }),
+    parameters: { email: "string" },
   },
   {
     name: "getPersonByRecordID",
     description: "Get a person from Attio by their Attio record ID",
-    parameters: z.object({ recordId: z.string() }),
+    parameters: { recordId: "string" },
   },
   {
     name: "assertPerson",
     description: "Assert a person in Attio",
-    parameters: z.object({
-      firstName: z.string().optional(),
-      lastName: z.string().optional(),
-      email: z.string(),
-      userId: z.string().optional(),
-      accountCreationDate: z.string().optional(),
-      leadSource: z.string().optional(),
-    }),
+    parameters: {
+      firstName: "string?",
+      lastName: "string?",
+      email: "string",
+      userId: "string?",
+      accountCreationDate: "string?",
+      leadSource: "string?",
+    },
   },
   {
     name: "updateCompany",
     description: "Update a company in Attio",
-    parameters: z.object({
-      companyId: z.string(),
-      updateObject: z.object({
-        orgId: z.object({ id: z.string(), name: z.string() }).optional(),
-        hasOnboarded: z.boolean().optional(),
-        creditsBought: z.number().optional(),
-        lastCreditPurchase: z.string().optional(),
-        accountCreationDate: z.string().optional(),
-      }),
-    }),
+    parameters: {
+      companyId: "string",
+      updateObject: {
+        orgId: {
+          id: "string?",
+          name: "string?",
+        },
+        hasOnboarded: "boolean?",
+        creditsBought: "number?",
+        lastCreditPurchase: "string?",
+        accountCreationDate: "string?",
+      },
+    },
   },
   {
     name: "pingSlack",
     description: "Ping the #yay Slack channel",
-    parameters: z.object({
-      personToPing: z.string(),
-      inbox: z.string(),
-      fromEmail: z.string(),
-    }),
+    parameters: {
+      personToPing: "string",
+      inbox: "string",
+      fromEmail: "string",
+    },
+  },
+  {
+    name: "getLeadStatusByEmail",
+    description: "Gets the lead status for a person from Smartlead",
+    parameters: {
+      email: "string",
+    },
   },
 ];
 
@@ -107,5 +117,16 @@ export const toolExecutors: Record<string, Function> = {
       throw new Error(`Slack webhook failed: ${res.status} - ${text}`);
     }
     return { ok: true };
+  },
+  getLeadStatusByEmail: async ({ email }: { email: string }) => {
+    const smartlead_api_key = process.env.SMARTLEAD_API_KEY;
+    if (!smartlead_api_key) {
+      throw new Error("SMARTLEAD_API_KEY environment variable is not set");
+    }
+    const response = await fetch(
+      `https://server.smartlead.ai/api/v1/leads/?api_key=${smartlead_api_key}&email=${email}`
+    );
+    const data = await response.json();
+    return data;
   },
 };
