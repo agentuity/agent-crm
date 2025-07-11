@@ -1,5 +1,4 @@
 import * as attio from "../../../lib/attio";
-import { z } from "zod";
 
 // Tool metadata in JSON format for createAgent
 export const toolMetadata = [
