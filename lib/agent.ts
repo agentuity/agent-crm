@@ -19,8 +19,10 @@ export const createAgent = (
     resp: AgentResponse,
     ctx: AgentContext
   ) {
+  
     try {
       const data = await req.data.text();
+      const allowedToolsArr = Object.keys(toolExecutors); // pull the list of tool names once so the Judge knows whats legal  
       const executionLog = [];
       const maxIterations = 10; // Safety limit to prevent infinite loops
       let iteration = 0;
