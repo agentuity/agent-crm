@@ -1,5 +1,10 @@
 const ATTIO_AUTH_TOKEN = process.env.ATTIO_AUTH_TOKEN;
 
+import { parseOrgIdString, formatOrgIdString, addOrgToOrgIdString } from './helpers';
+
+// Re-export helper functions for backwards compatibility
+export { parseOrgIdString, formatOrgIdString, addOrgToOrgIdString };
+
 export async function request(method: string, path: string, body?: any) {
   const url = `https://api.attio.com/v2${path}`;
   const res = await fetch(url, {
@@ -29,10 +34,8 @@ export type PersonInfo = {
   leadSource?: string;
 };
 
-export type OrgId = { id: string; name: string };
-
 export type UpdateCompanyObject = {
-  orgId?: OrgId;
+  orgId?: string; // Changed from OrgId object to string format: "Name:id|Name2:id2"
   hasOnboarded?: boolean;
   creditsBought?: number;
   lastCreditPurchase?: string; // timestamp
@@ -40,6 +43,7 @@ export type UpdateCompanyObject = {
 };
 
 // --- Utility/Helper Functions ---
+
 export function getRecordIdFromRecord(record: any): string | null {
   return record?.data?.id?.record_id || null;
 }
@@ -111,6 +115,7 @@ export async function getPersonByRecordID(recordId: string): Promise<any> {
 }
 
 // --- Company-related Functions ---
+
 export async function getCompanyByRecordID(recordId: string): Promise<any> {
   const company = await request(
     "GET",
@@ -121,14 +126,14 @@ export async function getCompanyByRecordID(recordId: string): Promise<any> {
 
 export async function getCompanyByPersonEmail(email: string): Promise<any> {
   const person = await getPersonByEmail(email);
-  console.log("Person object:", person);
+  
   const companyId = person.data[0]?.values?.company[0]?.target_record_id;
   if (!companyId) {
     return null;
   }
-  console.log("Extracted companyId:", companyId);
+  
   const company = await getCompanyByRecordID(companyId);
-  console.log("Company object:", company);
+  
   return company;
 }
 
@@ -139,7 +144,7 @@ export async function updateCompany(
   // Build values object dynamically, only including fields that exist
   const values: any = {};
   if (updateObject.orgId) {
-    values.org_id = updateObject.orgId.id;
+    values.org_id = updateObject.orgId;
   }
   if (typeof updateObject.hasOnboarded === "boolean") {
     values.has_onboarded = updateObject.hasOnboarded;
