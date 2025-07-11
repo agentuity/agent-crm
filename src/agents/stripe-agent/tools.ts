@@ -1,42 +1,69 @@
-// src/agents/stripe-agent/tools.ts
 import { z } from "zod";
-import { recordStripePurchase } from "../../../lib/attio_stripe";
-import { getPersonByEmail } from "../../../lib/attio";
 import fromZodSchema from "zod-to-json-schema";
+
+import {verifyStripeSignature} from "./verification"
+import { getOrgIdFromCustomer, recordStripeCharge } from "./stripe_helpers";
 
 // Tool metadata
 export const toolMetadataList = [
   {
-    name: "getPersonByEmail",
-    description: "Lookup a person in Attio by email.",
-    parameters: fromZodSchema(z.object({ email: z.string().email() })),
-  },
-  {
-    name: "recordStripePurchase",
+    name: "verifyStripeSignature",
     description:
-      "Increment company's creditsBought and set lastCreditPurchase.",
+      "Verify that the incoming webhook payload was genuinely sent by Stripe. Throws on failure.",
     parameters: fromZodSchema(
       z.object({
-        email: z.string().email(),
-        amount: z.number(),
-        timestamp: z.number(),
+        rawBody: z.string().min(10, "raw JSON payload as-string"),
+        sigHeader: z.string().min(10, "value from Stripe-Signature header"),
+      })
+    ),
+  },
+  {
+    name: "getOrgIdFromCustomer",
+    description:
+      "Given a Stripe customer ID, fetch the customer via Stripe API and return metadata.orgId.",
+    parameters: fromZodSchema(
+      z.object({
+        stripeCustomerId: z.string().startsWith("cus_"),
+      })
+    ),
+  },
+  {
+    name: "recordStripeCharge",
+    description:
+      "Add the charge amount (in cents) to the company’s creditsBought and stamp lastCreditPurchase.",
+    parameters: fromZodSchema(
+      z.object({
+        orgId: z.string().min(1),
+        amount: z.number().int().positive(),
+        timestamp: z.number().int().positive(), // unix seconds
       })
     ),
   },
 ];
 
 // Tool executors
-export const toolExecutors = {
-  getPersonByEmail: async ({ email }: { email: string }) =>
-    getPersonByEmail(email),
+export const toolExecutors: Record<string, Function> = {
+  verifyStripeSignature: async ({
+    rawBody,
+    sigHeader,
+  }: {
+    rawBody: string;
+    sigHeader: string;
+  }) => verifyStripeSignature(rawBody, sigHeader),
 
-  recordStripePurchase: async ({
-    email,
+  getOrgIdFromCustomer: async ({
+    stripeCustomerId,
+  }: {
+    stripeCustomerId: string;
+  }) => getOrgIdFromCustomer(stripeCustomerId),
+
+  recordStripeCharge: async ({
+    orgId,
     amount,
     timestamp,
   }: {
-    email: string;
+    orgId: string;
     amount: number;
     timestamp: number;
-  }) => recordStripePurchase(email, amount, timestamp),
+  }) => recordStripeCharge(orgId, amount, timestamp),
 };

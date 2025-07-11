@@ -190,6 +190,28 @@ export async function addCompanyToPipeLine(
   return await request("POST", "/objects/deals/records", body);
 }
 
+export async function getCompanyByOrgId(orgId: string): Promise<any | null> {
+  // Search the Companies object with a simple filter
+  const queryBody = {
+    filter: { org_id: orgId },
+  };
+
+  const search: any = await request(
+    "POST",
+    "/objects/companies/records/query",
+    queryBody
+  );
+
+  const hit = search?.data?.[0];
+  if (!hit) return null;
+
+  // Fetch the complete record so callers get the same shape as getCompanyByRecordID
+  const recordId = hit.id?.record_id ?? hit.data?.id?.record_id;
+  if (!recordId) return null;
+
+  return await getCompanyByRecordID(recordId);
+}
+
 // // --- Main/Test Code ---
 // await assertPerson({
 //   email: "sue@gmail.com",
