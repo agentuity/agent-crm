@@ -34,7 +34,8 @@
     "ai": "^4.3.16",
     "drizzle-orm": "^0.44.2",
     "openai": "^5.8.2",
-    "postgres": "^3.4.7"
+    "postgres": "^3.4.7",
+    "stripe": "^18.3.0"
   },
   "module": "index.ts"
 }
