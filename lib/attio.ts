@@ -173,41 +173,68 @@ export async function updateCompany(
   );
 }
 
-export async function addCompanyToPipeLine(
+// --- Deal-related Functions ---
+/**
+ * Skeleton: Find a deal by company record ID. Returns the first matching deal or null.
+ */
+export async function getDealByCompanyRecordId(
+  companyRecordId: string
+): Promise<any> {
+  const body = {
+    filter: {
+      associated_company: {
+        target_record_id: companyRecordId,
+      },
+    },
+  };
+  return await request("POST", "/objects/deals/records/query", body);
+}
+
+export async function assertCompanyInPipeline(
   companyRecordId: string,
   personRecordId: string,
   companyName: string
 ): Promise<any> {
-  const body = {
-    data: {
-      values: {
-        name: `Deal with ${companyName}`,
-        stage: "Lead",
-        owner: "nmirigliani@agentuity.com",
-        value: 0,
-        associated_people: [personRecordId],
-        associated_company: companyRecordId,
+  // First, try to find an existing deal for this company
+  const existingDeal = await getDealByCompanyRecordId(companyRecordId);
+  console.log("existingDeal:", existingDeal);
+  if (existingDeal.data.length > 0) {
+    // If a deal exists, add the person to associated_people (if not already present)
+    const dealId = existingDeal.data[0]?.id?.record_id;
+    const currentPeople = existingDeal.data[0]?.values?.associated_people || [];
+    // Extract just the record IDs
+    const currentPeopleIds = currentPeople
+      .map((p: any) => (typeof p === "string" ? p : p?.target_record_id))
+      .filter(Boolean);
+
+    if (!currentPeopleIds.includes(personRecordId)) {
+      const updatedPeople = [...currentPeopleIds, personRecordId];
+      const body = {
+        data: {
+          values: {
+            associated_people: updatedPeople,
+          },
+        },
+      };
+      return await request("PATCH", `/objects/deals/records/${dealId}`, body);
+    } else {
+      // Person already associated, nothing to do
+      return existingDeal;
+    }
+  } else {
+    // No deal exists, create a new one
+    const body = {
+      data: {
+        values: {
+          name: `Deal with ${companyName}`,
+          stage: "Lead",
+          owner: "nmirigliani@agentuity.com",
+          value: 0,
+          associated_people: [personRecordId],
+          associated_company: companyRecordId,
+        },
       },
-    },
-  };
-  return await request("POST", "/objects/deals/records", body);
+    };
+    return await request("POST", "/objects/deals/records", body);
+  }
 }
-
-// // --- Main/Test Code ---
-// await assertPerson({
-//   email: "sue@gmail.com",
-//   firstName: "Sue",
-//   lastName: "Smith",
-//   userId: "user_M4r2u8d1O2Aukv5bR6Fr5o8bR5F",
-//   accountCreationDate: "2021-01-01T00:00:00Z",
-//   leadSource: "Google",
-// });
-
-// const companyId = getRecordIdFromRecord(await getCompanyByPersonEmail("sue@gmail.com"));
-// if (companyId) {
-//   await updateCompany(companyId, {
-//     creditsBought: 500,
-//   });
-// } else {
-//   console.error("Company ID not found for sue@gmail.com");
-// }

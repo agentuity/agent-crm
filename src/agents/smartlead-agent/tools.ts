@@ -1,6 +1,8 @@
 import { ConsoleLogWriter } from "drizzle-orm";
 import * as attio from "../../../lib/attio";
 import { z } from "zod";
+import { getFromSmartLead, updateSmartLeadStatus } from "./smartlead-helpers";
+import type { SmartLeadResponse } from "./smartlead-helpers";
 
 // --- Tool Definitions ---
 
@@ -29,28 +31,7 @@ export const toolMetadataList = [
   },
 ];
 
-interface SmartLeadResponse {
-  id?: string;
-  lead_campaign_data?: {
-    campaign_id?: string;
-  }[];
-  custom_fields?: {
-    custom_lead_status?: string;
-  };
-}
-
-async function getFromSmartLead(url: string): Promise<SmartLeadResponse> {
-  const api_key = process.env.SMARTLEAD_API_KEY;
-  if (!api_key) {
-    throw new Error("SMARTLEAD_API_KEY environment variable is not set");
-  }
-  const response = await fetch(url + `&api_key=${api_key}`);
-  if (!response.ok) {
-    throw new Error("Failed to get data from SmartLead");
-  }
-  const data = (await response.json()) as SmartLeadResponse;
-  return data;
-}
+// Remove SmartLeadResponse interface and getFromSmartLead function from this file
 
 // --- Tool Executors ---
 export const toolExecutors: Record<string, Function> = {
@@ -110,7 +91,7 @@ export const toolExecutors: Record<string, Function> = {
   }) => {
     // Add to Attio
     let person = await attio.getPersonByEmail(lead_email);
-    if (person) console.log("Got person.", person);
+    if (person) console.log("Got person.");
     let personRecordId;
     if (person.data.length === 0) {
       console.log("No person found, asserting.");
@@ -137,7 +118,7 @@ export const toolExecutors: Record<string, Function> = {
       const companyRecordId = attio.getRecordIdFromCompany(company);
       if (companyRecordId) console.log("Got company record id.");
       if (companyRecordId && personRecordId) {
-        await attio.addCompanyToPipeLine(
+        await attio.assertCompanyInPipeline(
           companyRecordId,
           personRecordId,
           lead_company_name
@@ -148,47 +129,15 @@ export const toolExecutors: Record<string, Function> = {
     }
 
     // Update lead status in SmartLead
-    let smartlead_response = await getFromSmartLead(
-      `https://server.smartlead.ai/api/v1/leads/?email=${lead_email}`
-    );
-    console.log("SmartLead data:", smartlead_response);
-    if (smartlead_response) {
-      let lead_id = smartlead_response?.id;
-      console.log("Lead ID:", lead_id);
-      let campaign_id =
-        smartlead_response?.lead_campaign_data?.[0]?.campaign_id;
-      console.log("Campaign ID:", campaign_id);
-      if (lead_id && campaign_id) {
-        const api_key = process.env.SMARTLEAD_API_KEY;
-        const url = `https://server.smartlead.ai/api/v1/campaigns/${campaign_id}/leads/${lead_id}?api_key=${api_key}`;
-        const lead_input = {
-          email: lead_email, // <-- ensure this is present
-          custom_fields: {
-            custom_lead_status: "positive",
-          },
-        };
-        const response = await fetch(url, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(lead_input),
-        });
-        const result = await response.json();
-        console.log("SmartLead campaign/lead update response:", result);
+    try {
+      const result = await updateSmartLeadStatus(lead_email, "positive");
+      console.log("SmartLead campaign/lead update response:", result);
+    } catch (err) {
+      if (err instanceof Error) {
+        console.log(err.message);
+      } else {
+        console.log(err);
       }
-    } else {
-      console.log("Person not found in SmartLead.");
     }
   },
-
-  // getLeadStatusByEmail: async ({ email }: { email: string }) => {
-  //   const smartlead_api_key = process.env.SMARTLEAD_API_KEY;
-  //   if (!smartlead_api_key) {
-  //     throw new Error("SMARTLEAD_API_KEY environment variable is not set");
-  //   }
-  //   const response = await fetch(
-  //     `https://server.smartlead.ai/api/v1/leads/?api_key=${smartlead_api_key}&email=${email}`
-  //   );
-  //   const data = await response.json();
-  //   return data;
-  // },
 };
