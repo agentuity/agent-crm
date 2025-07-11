@@ -2,7 +2,7 @@ import { z } from "zod";
 import fromZodSchema from "zod-to-json-schema";
 
 //import {verifyStripeSignature} from "./verification"
-import { getOrgIdFromCustomer, recordStripeCharge } from "./stripe_helpers";
+import { getOrgIdFromCustomer, recordStripeCharge } from "./helpers";
 
 // Tool metadata
 export const toolMetadataList = [

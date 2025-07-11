@@ -26,22 +26,61 @@ export async function getOrgIdFromCustomer(customerId: string): Promise<string> 
 
 // Find the Attio company by scanning its pipe-delimited org_id string (Name:id|Name2:id2|…)
 async function findCompanyByOrgId(orgId: string): Promise<any | null> {
-  const search: any = await request("POST", "/objects/companies/records/query", {
-    attributes: ["org_id"],
-  });
+  console.log("🔍  findCompanyByOrgId – searching for", orgId);
 
-  for (const hit of search.data ?? []) {
-    const raw = hit.values?.org_id ?? hit.data?.values?.org_id?.value ?? "";
-    if (!raw) continue;
+  // Ask Attio for *only* the org_id column so we don’t pull giant payloads back.
+  const { data: rows = [] } = (await request(
+    "POST","/objects/companies/records/query",
+    { attributes: ["org_id"] },
+  )) as { data?: any[] };
 
-    const parsed = parseOrgIdString(raw);   
-    if (parsed.some(org => org.id === orgId)) {
-      const recId =
-        hit.id?.record_id ||
-        hit.data?.id?.record_id;
-      if (recId) return getCompanyByRecordID(recId);
+  console.log(`🔍  Scanning ${rows.length} companies from Attio…`);
+
+  // Utility that checks whether one string cell contains the target orgId, "orgId=<id>" or "NameA:idA|NameB:idB"
+  const cellMatches = (raw: string): boolean => {
+    if (raw.startsWith("orgId=")) return raw.slice(6).trim() === orgId;
+    return parseOrgIdString(raw).some(o => o.id === orgId);
+  };
+
+  for (const [index, row] of rows.entries()) {
+    const recordId =
+      row.id?.record_id ??
+      row.data?.id?.record_id ??
+      "<missing-record-id>";
+
+    const cellValue =
+      row.values?.org_id ??
+      row.data?.values?.org_id?.value ??
+      "";
+
+    console.log(
+      `[${index}] recordId=${recordId} rawOrgId=`,
+      JSON.stringify(cellValue),
+    );
+
+    // Nothing stored, on to the next row
+    if (!cellValue || (Array.isArray(cellValue) && cellValue.length === 0)) {
+      continue;
+    }
+
+    // History array (newer Attio) 
+    if (Array.isArray(cellValue)) {
+      const hit = cellValue.find(v => cellMatches(String(v?.value ?? "")));
+      if (hit) {
+        console.log("✅  Match found inside history array ->", recordId);
+        return getCompanyByRecordID(recordId);
+      }
+      continue; // no match in the history entries
+    }
+
+    // Single-string cell
+    if (typeof cellValue === "string" && cellMatches(cellValue.trim())) {
+      console.log("✅  Match found in single string ->", recordId);
+      return getCompanyByRecordID(recordId);
     }
   }
+
+  console.warn("⚠️  No company contains orgId", orgId);
   return null;
 }
 
@@ -52,20 +91,20 @@ export async function updateCompanyCredits(
   createdUnix: number
 ) {
   const companyRec = await findCompanyByOrgId(orgId);
-  if (!companyRec) {
-    throw new Error(`Attio company with orgId=${orgId} not found`);
-  }
+  if (!companyRec) throw new Error(`Attio company with orgId=${orgId} not found`);
 
   const companyId = getRecordIdFromRecord(companyRec);
-  const existing = companyRec.data.values.credits_bought?.value ?? 0;
+  if (!companyId) throw new Error(`No companyId found for orgId=${orgId}`);
 
-  if (!companyId) {
-    throw new Error(`No companyId found for orgId=${orgId}`);
-  }
-  return updateCompany(companyId, {
-    creditsBought: existing + amountCents,
-    lastCreditPurchase: new Date(createdUnix * 1000).toISOString(),
-  });
+  const existing = companyRec.data.values?.creditsBought?.value ?? 0;
+
+  return updateCompany(
+    companyId, 
+    {
+      creditsBought : existing + amountCents,
+      lastCreditPurchase : new Date(createdUnix * 1000).toISOString(),
+    } as any 
+  );
 }
 
 // High-level tool that the agent calls

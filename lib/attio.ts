@@ -153,7 +153,7 @@ export async function updateCompany(
     values.credits_bought = updateObject.creditsBought;
   }
   if (updateObject.lastCreditPurchase) {
-    values.last_credit_purchase = updateObject.lastCreditPurchase;
+    values.last_credit_purchase_3 = updateObject.lastCreditPurchase;
   }
   if (updateObject.accountCreationDate) {
     values.account_creation_date = updateObject.accountCreationDate;
