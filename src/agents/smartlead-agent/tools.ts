@@ -110,9 +110,9 @@ export const toolExecutors: Record<string, Function> = {
   }) => {
     // Add to Attio
     let person = await attio.getPersonByEmail(lead_email);
-    if (person) console.log("Got person.");
+    if (person) console.log("Got person.", person);
     let personRecordId;
-    if (!person) {
+    if (person.data.length === 0) {
       console.log("No person found, asserting.");
       await attio.assertPerson({
         email: lead_email,
@@ -121,7 +121,7 @@ export const toolExecutors: Record<string, Function> = {
         leadSource: "SmartLead",
       });
       person = await attio.getPersonByEmail(lead_email);
-      if (person) console.log("Got person after asserting.");
+      if (person.data.length >= 0) console.log("Got person after asserting.");
       personRecordId = attio.getRecordIdFromPerson(person);
       if (personRecordId) console.log("Got person record id after asserting.");
     } else {
@@ -176,7 +176,7 @@ export const toolExecutors: Record<string, Function> = {
         console.log("SmartLead campaign/lead update response:", result);
       }
     } else {
-      console.log("No lead found.");
+      console.log("Person not found in SmartLead.");
     }
   },
 
