@@ -66,71 +66,24 @@ export const toolMetadata = [
       orgId: "string",
     },
   },
+  {
+    name: "getCompaniesByOrgId",
+    description: "Find all companies that contain a specific organization ID in their orgId field",
+    parameters: {
+      orgId: "string",
+    },
+  },
+  {
+    name: "updateOrgNameInCompany",
+    description: "Update an organization's name in a company's orgId field based on org ID",
+    parameters: {
+      companyId: "string",
+      orgId: "string",
+      newOrgName: "string",
+    },
+  },
 ];
 
-// // Original zod-based tools (kept for reference/validation if needed)
-// export const tools = [
-//     {
-//       name: "getPersonByEmail",
-//       description: "Get a person by their email",
-//       parameters: z.object({ email: z.string() }),
-//     },
-//     {
-//       name: "getCompanyByPersonEmail",
-//       description: "Get a company by the email of a person",
-//       parameters: z.object({ email: z.string() }),
-//     },
-//     {
-//       name: "getPersonByClerkID",
-//       description: "Get a person by their Clerk ID",
-//       parameters: z.object({ clerkId: z.string() }),
-//     },
-//     {
-//       name: "getPersonByRecordID",
-//       description: "Get a person by their Attio record ID",
-//       parameters: z.object({ recordId: z.string() }),
-//     },
-//     {
-//       name: "assertPerson",
-//       description: "Assert a person",
-//       parameters: z.object({
-//         firstName: z.string().optional(),
-//         lastName: z.string().optional(),
-//         email: z.string(),
-//         userId: z.string().optional(),
-//         accountCreationDate: z.string().optional(),
-//         leadSource: z.string().optional(),
-//       }),
-//     },
-//     {
-//       name: "getCompanyByRecordID",
-//       description: "Get a company by their Attio record ID",
-//       parameters: z.object({ recordId: z.string() }),
-//     },
-//     {
-//       name: "updateCompany",
-//       description: "Update a company",
-//       parameters: z.object({
-//         companyId: z.string(),
-//         updateObject: z.object({
-//           orgId: z.string().optional(), // Changed from object to string
-//           hasOnboarded: z.boolean().optional(),
-//           creditsBought: z.number().optional(),
-//           lastCreditPurchase: z.string().optional(),
-//           accountCreationDate: z.string().optional(),
-//         }),
-//       }),
-//     },
-//     {
-//       name: "addOrgToCompany",
-//       description: "Add an organization to a company's orgId field",
-//       parameters: z.object({
-//         companyId: z.string(),
-//         orgName: z.string(),
-//         orgId: z.string(),
-//       }),
-//     },
-//   ];
 
   export const toolExecutors: Record<string, Function> = {
     getPersonByEmail: async ({ email }: { email: string }) => {
@@ -162,26 +115,55 @@ export const toolMetadata = [
     }) => {
       return await attio.updateCompany(companyId, updateObject);
     },
-    addOrgToCompany: async ({
-      companyId,
-      orgName,
-      orgId,
-    }: {
-      companyId: string;
-      orgName: string;
-      orgId: string;
-    }) => {
-      // First get the current company to check existing orgId
-      const company = await attio.getCompanyByRecordID(companyId);
-      // Extract the actual string value from Attio's attribute structure
-      const currentOrgId = company?.data?.values?.org_id?.[0]?.value || null;
-      
-      // Add the new org to the string
-      const updatedOrgId = attio.addOrgToOrgIdString(currentOrgId, orgName, orgId);
-      
-      // Update the company with the new orgId string
-      const result = await attio.updateCompany(companyId, { orgId: updatedOrgId });
-      
-      return result;
-    },
-  };
+      addOrgToCompany: async ({
+    companyId,
+    orgName,
+    orgId,
+  }: {
+    companyId: string;
+    orgName: string;
+    orgId: string;
+  }) => {
+    // First get the current company to check existing orgId
+    const company = await attio.getCompanyByRecordID(companyId);
+    // Extract the actual string value from Attio's attribute structure
+    const currentOrgId = company?.data?.values?.org_id?.[0]?.value || null;
+    
+    // Add the new org to the string
+    const updatedOrgId = attio.addOrgToOrgIdString(currentOrgId, orgName, orgId);
+    
+    // Update the company with the new orgId string
+    const result = await attio.updateCompany(companyId, { orgId: updatedOrgId });
+    
+    return result;
+  },
+  getCompaniesByOrgId: async ({ orgId }: { orgId: string }) => {
+    return await attio.getCompaniesByOrgId(orgId);
+  },
+  updateOrgNameInCompany: async ({
+    companyId,
+    orgId,
+    newOrgName,
+  }: {
+    companyId: string;
+    orgId: string;
+    newOrgName: string;
+  }) => {
+    // First get the current company to check existing orgId
+    const company = await attio.getCompanyByRecordID(companyId);
+    // Extract the actual string value from Attio's attribute structure
+    const currentOrgId = company?.data?.values?.org_id?.[0]?.value || null;
+    
+    // Update the org name in the string
+    const updatedOrgId = attio.updateOrgNameInOrgIdString(currentOrgId, orgId, newOrgName);
+    
+    if (updatedOrgId === null) {
+      throw new Error(`Organization with ID ${orgId} not found in company ${companyId}`);
+    }
+    
+    // Update the company with the new orgId string
+    const result = await attio.updateCompany(companyId, { orgId: updatedOrgId });
+    
+    return result;
+  },
+};

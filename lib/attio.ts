@@ -1,9 +1,9 @@
 const ATTIO_AUTH_TOKEN = process.env.ATTIO_AUTH_TOKEN;
 
-import { parseOrgIdString, formatOrgIdString, addOrgToOrgIdString } from './helpers';
+import { parseOrgIdString, formatOrgIdString, addOrgToOrgIdString, updateOrgNameInOrgIdString } from './helpers';
 
 // Re-export helper functions for backwards compatibility
-export { parseOrgIdString, formatOrgIdString, addOrgToOrgIdString };
+export { parseOrgIdString, formatOrgIdString, addOrgToOrgIdString, updateOrgNameInOrgIdString };
 
 export async function request(method: string, path: string, body?: any) {
   const url = `https://api.attio.com/v2${path}`;
@@ -210,6 +210,41 @@ export async function getCompanyByOrgId(orgId: string): Promise<any | null> {
   if (!recordId) return null;
 
   return await getCompanyByRecordID(recordId);
+}
+
+export async function getCompaniesByOrgId(orgId: string): Promise<any[]> {
+  // Get all companies since Attio doesn't support substring search on orgId field
+  const queryBody = {}; // No filter to get all companies
+
+  const search: any = await request(
+    "POST",
+    "/objects/companies/records/query",
+    queryBody
+  );
+
+  if (!search?.data) return [];
+
+  // Filter companies that have the orgId in their concatenated orgId string
+  const matchingCompanies = search.data.filter((company: any) => {
+    const orgIdValue = company?.values?.org_id?.[0]?.value;
+    if (!orgIdValue || typeof orgIdValue !== 'string') return false;
+    
+    // Parse the orgId string and check if any org has the target ID
+    const orgs = parseOrgIdString(orgIdValue);
+    return orgs.some(org => org.id === orgId);
+  });
+
+  // Return full company records
+  const results = [];
+  for (const company of matchingCompanies) {
+    const recordId = company.id?.record_id;
+    if (recordId) {
+      const fullCompany = await getCompanyByRecordID(recordId);
+      results.push(fullCompany);
+    }
+  }
+
+  return results;
 }
 
 // // --- Main/Test Code ---
