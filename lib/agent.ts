@@ -11,7 +11,8 @@ export const createAgent = (
     description: string;
     parameters: any;
   }[],
-  toolExecutors: Record<string, Function>
+  toolExecutors: Record<string, Function>,
+  verifyWebhook?: (req: AgentRequest, resp: AgentResponse, ctx: AgentContext) => Promise<boolean>
 ) => {
   // tools is a map of tool names to functions
   return async function Agent(
@@ -19,10 +20,18 @@ export const createAgent = (
     resp: AgentResponse,
     ctx: AgentContext
   ) {
-  
+    if (verifyWebhook) {
+      const result = await verifyWebhook(req, resp, ctx);
+      if (!result) {
+        console.log("Webhook verification failed");
+        return resp.json({ success: false, error: "Webhook verification failed" });
+      }
+      else {
+        console.log("Webhook verification passed");
+      }
+    }
     try {
       const data = await req.data.text();
-      const allowedToolsArr = Object.keys(toolExecutors); // pull the list of tool names once so the Judge knows whats legal  
       const executionLog = [];
       const maxIterations = 10; // Safety limit to prevent infinite loops
       let iteration = 0;

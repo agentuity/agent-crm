@@ -1,5 +1,9 @@
+import type { AgentRequest, AgentResponse, AgentContext } from "@agentuity/sdk";
 import { createAgent } from "../../../lib/agent";
 import { toolExecutors, toolMetadataList } from "./tools";
+import Stripe from "stripe";
+const stripe = new Stripe(process.env.STRIPE_API_KEY ?? "", { apiVersion: "2025-06-30.basil" });
+
 
 const prompt = `
 You are an automated backend agent that handles **Stripe \`charge.succeeded\`**
@@ -34,17 +38,26 @@ CONSTRAINTS:
 • Produce no extra commentary; the judge module will reject deviations.
 `;
 
+const verifyWebhook = async (req: AgentRequest, resp: AgentResponse, ctx: AgentContext) => {
+  const headers = req.get("headers") as Record<string, string>;
+  const sigHeader = headers["stripe-signature"] ?? "";
+  const rawBuf = await req.data.text();
+  try {
+    const event = stripe.webhooks.constructEvent(
+      rawBuf,
+      sigHeader,
+      process.env.STRIPE_SIGNING_SECRET ?? ""
+    );
+    return true;
+  } catch (error) {
+    console.error("❌  Stripe verification failed:", error);
+    return false;
+  }
+};
+
 export default createAgent(
   prompt,
   toolMetadataList,
-  toolExecutors
+  toolExecutors,
+  verifyWebhook
 );
-
-
-// SECURITY STEP:
-// • Every webhook arrives with:
-//     – \`rawBody\`    → exact JSON string sent by Stripe
-//     – \`sigHeader\` → value from the "stripe-signature" HTTP header
-// • ALWAYS call **verifyStripeSignature(rawBody, sigHeader)** first.
-//   If the signature check fails that tool will throw and NO further actions
-//   are permitted.
