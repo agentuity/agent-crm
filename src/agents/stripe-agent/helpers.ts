@@ -58,6 +58,7 @@ async function findCompanyByOrgId(orgId: string): Promise<any | null> {
       JSON.stringify(cellValue),
     );
 
+    console.log(row);
     // Nothing stored, on to the next row
     if (!cellValue || (Array.isArray(cellValue) && cellValue.length === 0)) {
       continue;
@@ -84,32 +85,52 @@ async function findCompanyByOrgId(orgId: string): Promise<any | null> {
   return null;
 }
 
-// Credit the company
+function extractAmount(raw: any): number {
+  if (raw == null) return 0;
+  if (typeof raw === "number") return raw;
+  if (typeof raw === "string") return Number(raw);
+
+  if (typeof raw === "object") {
+    if ("amount" in raw) return Number(raw.amount);
+    if ("value" in raw) return Number(raw.value);
+    if ("currency_value" in raw) return Number(raw.currency_value);
+  }
+  return 0;
+}
+
+function getCurrentValue(field: any): number {
+  if (!field) return 0;
+
+  if (Array.isArray(field)) {
+    const latest = field[field.length - 1];         
+    return extractAmount(latest?.value ?? latest);
+  }
+  return extractAmount(field.value ?? field);
+}
+
 export async function updateCompanyCredits(
   orgId: string,
   amountCents: number,
-  createdUnix: number
+  _createdUnix?: number
 ) {
-  const companyRec = await findCompanyByOrgId(orgId);
-  if (!companyRec) throw new Error(`Attio company with orgId=${orgId} not found`);
+  const company = await findCompanyByOrgId(orgId);
+  if (!company) throw new Error(`No company found for orgId=${orgId}`);
 
-  const companyId = getRecordIdFromRecord(companyRec);
-  if (!companyId) throw new Error(`No companyId found for orgId=${orgId}`);
+  const companyId = getRecordIdFromRecord(company);
+  if (!companyId) throw new Error(`No companyId for orgId=${orgId}`);
 
-  const latest = (arr: any[]) => arr[arr.length - 1];
+  const currentRaw = company.data.values?.credits_bought;
+  const existing = getCurrentValue(currentRaw);
+  const newAmount = existing + (amountCents / 100);           
+  const isoDate = new Date().toISOString();         
 
-  const raw = companyRec.data.values?.credits_bought;   // ← correct slug
+  console.log(`💳 Existing dollars: ${existing} → New dollars: ${newAmount}`);
+  console.log(`🕒 Updating last purchase to: ${isoDate}`);
 
-  const existing =
-    Array.isArray(raw) ? Number(latest(raw)?.value ?? 0) : raw?.value ?? 0;
-
-  return updateCompany(
-    companyId, 
-    {
-      creditsBought : existing + amountCents,
-      lastCreditPurchase : new Date(createdUnix * 1000).toISOString(),
-    } as any 
-  );
+  return updateCompany(companyId, {
+    creditsBought : newAmount,       
+    lastCreditPurchase : isoDate,         
+  });
 }
 
 // High-level tool that the agent calls
