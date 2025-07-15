@@ -17,6 +17,16 @@ Convert timestamps from Unix milliseconds to ISO strings if needed.
 - \`getCompanyByPersonEmail\` - Find company associated with person
 - \`getCompanyByRecordID\` - Get company by Attio record ID
 - \`updateCompany\` - Update company fields
+- \`addOrgToCompany\` - Add organization to company's orgId field (handles string concatenation)
+- \`getCompaniesByOrgId\` - Find all companies that contain a specific organization ID in their orgId field
+- \`updateOrgNameInCompany\` - Update an organization's name in a company's orgId field based on org ID
+
+## Organization ID Format
+Companies store multiple organizations in a single \`orgId\` string field using this format:
+- Single org: \`"Organization Name:org_id"\`
+- Multiple orgs: \`"Org1:id1|Org2:id2|Org3:id3"\`
+- Use pipe \`|\` as delimiter between organizations
+- Use colon \`:\` to separate name from ID
 
 ## Workflow by Event Type:
 
@@ -44,32 +54,36 @@ Convert timestamps from Unix milliseconds to ISO strings if needed.
 4. If team changed, update associated company
 
 ### organization.created
-**Data**: \`data.id\` (org ID), \`data.name\`, \`data.created_by\` (user ID)
+**Data**: \`data.id\` (org ID), \`data.name\` (org name), \`data.created_by\` (user ID who created it)
 
 **Steps**:
-1. Use \`getPersonByClerkID\` with \`data.created_by\` to find user
-2. If person found, use \`getCompanyByPersonEmail\` to check for existing company
-3. If company exists:
-   - Use \`updateCompany\` to add org info to \`orgId\` field: \`{id: data.id, name: data.name}\`
-4. If no company:
-   - Create new company (this may require additional tools/logic)
+1. Use \`getPersonByClerkID\` with \`data.created_by\` to find the user who created the organization
+2. Use \`getCompanyByPersonEmail\` to find their existing company (Attio auto-creates companies based on email domain)
+3. Use \`addOrgToCompany\` with:
+   - \`companyId\`: company record ID
+   - \`orgName\`: \`data.name\`
+   - \`orgId\`: \`data.id\`
+4. This will automatically append the new org to the existing orgId string
 
 ### organization.updated  
-**Data**: \`data.id\`, \`data.name\`, \`data.public_metadata.hasonboarded\`
+**Data**: \`data.id\` (org ID), \`data.name\` (org name), \`data.public_metadata.hasOnboarded\`
 
 **Steps**:
-1. Find company by organization ID (may need to search by org ID in custom fields)
-2. Use \`updateCompany\` with:
-   - \`hasOnboarded\`: \`data.public_metadata.hasonboarded\` 
-   - Update org name if changed
+1. Use \`getCompaniesByOrgId\` with \`data.id\` to find all companies that have this organization ID in their orgId string
+2. For each company found:
+   - Check if the org name in the orgId string matches \`data.name\`
+   - If the name is different, use \`updateOrgNameInCompany\` to update the org name in the orgId string
+   - If \`data.public_metadata.hasOnboarded\` is \`true\`, use \`updateCompany\` to update the \`hasOnboarded\` field to \`true\`
+3. Log all actions taken for debugging
 
 ## Error Handling:
 - If person not found when expected, log warning and continue
 - If company operations fail, ensure person operations still complete
 - Always log the action taken for debugging
+- The \`addOrgToCompany\` tool automatically handles duplicate prevention
 
 ## Data Format:
-- Store organization IDs as: \`[org_id] Organization Name\`
+- Store organization IDs as: \`"Organization Name:org_id|Another Org:org_id2"\`
 - Convert Unix timestamps (milliseconds) to ISO strings: \`new Date(timestamp).toISOString()\`
 - Use ISO timestamps for dates
 - Validate email addresses before processing
@@ -79,8 +93,9 @@ Convert timestamps from Unix milliseconds to ISO strings if needed.
 2. Extract and validate required data fields
 3. Convert Unix timestamps to ISO strings when needed
 4. Check if entities exist before creating/updating
-5. Log all actions taken
-6. Handle errors gracefully without stopping the workflow
+5. Use appropriate tools for orgId string manipulation
+6. Log all actions taken
+7. Handle errors gracefully without stopping the workflow
 `;
 
 export default createAgent(clerkWebhookPrompt, toolMetadata, toolExecutors);

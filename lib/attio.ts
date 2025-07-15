@@ -1,5 +1,10 @@
 const ATTIO_AUTH_TOKEN = process.env.ATTIO_AUTH_TOKEN;
 
+import { parseOrgIdString, formatOrgIdString, addOrgToOrgIdString, updateOrgNameInOrgIdString } from './helpers';
+
+// Re-export helper functions for backwards compatibility
+export { parseOrgIdString, formatOrgIdString, addOrgToOrgIdString, updateOrgNameInOrgIdString };
+
 export async function request(method: string, path: string, body?: any) {
   const url = `https://api.attio.com/v2${path}`;
   const res = await fetch(url, {
@@ -29,10 +34,9 @@ export type PersonInfo = {
   leadSource?: string;
 };
 
-// export type OrgId = { id: string; name: string };
-
 export type UpdateCompanyObject = {
-  orgId?: string;
+  orgId?: string; // Changed from OrgId object to string format: "Name:id|Name2:id2"
+
   hasOnboarded?: boolean;
   creditsBought?: number;
   lastCreditPurchase?: string; // timestamp
@@ -40,6 +44,7 @@ export type UpdateCompanyObject = {
 };
 
 // --- Utility/Helper Functions ---
+
 export function getRecordIdFromRecord(record: any): string | null {
   return record?.data?.id?.record_id || null;
 }
@@ -119,6 +124,7 @@ export async function getPersonByRecordID(recordId: string): Promise<any> {
 }
 
 // --- Company-related Functions ---
+
 export async function getCompanyByRecordID(recordId: string): Promise<any> {
   const company = await request(
     "GET",
@@ -129,14 +135,11 @@ export async function getCompanyByRecordID(recordId: string): Promise<any> {
 
 export async function getCompanyByPersonEmail(email: string): Promise<any> {
   const person = await getPersonByEmail(email);
-  // console.log("Person object:", person);
   const companyId = person.data[0]?.values?.company[0]?.target_record_id;
   if (!companyId) {
     return null;
   }
-  // console.log("Extracted companyId:", companyId);
   const company = await getCompanyByRecordID(companyId);
-  // console.log("Company object:", company);
   return company;
 }
 
@@ -156,7 +159,7 @@ export async function updateCompany(
     values.credits_bought = updateObject.creditsBought;
   }
   if (updateObject.lastCreditPurchase) {
-    values.last_credit_purchase = updateObject.lastCreditPurchase;
+    values.last_credit_purchase_3 = updateObject.lastCreditPurchase;
   }
   if (updateObject.accountCreationDate) {
     values.account_creation_date = updateObject.accountCreationDate;
@@ -237,4 +240,61 @@ export async function assertCompanyInPipeline(
     };
     return await request("POST", "/objects/deals/records", body);
   }
+}
+
+export async function getCompanyByOrgId(orgId: string): Promise<any | null> {
+  // Search the Companies object with a simple filter
+  const queryBody = {
+    filter: { org_id: orgId },
+  };
+
+  const search: any = await request(
+    "POST",
+    "/objects/companies/records/query",
+    queryBody
+  );
+
+  const hit = search?.data?.[0];
+  if (!hit) return null;
+
+  // Fetch the complete record so callers get the same shape as getCompanyByRecordID
+  const recordId = hit.id?.record_id ?? hit.data?.id?.record_id;
+  if (!recordId) return null;
+
+  return await getCompanyByRecordID(recordId);
+}
+
+export async function getCompaniesByOrgId(orgId: string): Promise<any[]> {
+  // Get all companies since Attio doesn't support substring search on orgId field
+  const queryBody = {}; // No filter to get all companies
+
+  const search: any = await request(
+    "POST",
+    "/objects/companies/records/query",
+    queryBody
+  );
+
+  if (!search?.data) return [];
+
+  // Filter companies that have the orgId in their concatenated orgId string
+  const matchingCompanies = search.data.filter((company: any) => {
+    const orgIdValue = company?.values?.org_id?.[0]?.value;
+    if (!orgIdValue || typeof orgIdValue !== 'string') return false;
+    
+    // Parse the orgId string and check if any org has the target ID
+    const orgs = parseOrgIdString(orgIdValue);
+    return orgs.some(org => org.id === orgId);
+  });
+
+  // Return full company records
+  const results = [];
+  for (const company of matchingCompanies) {
+    const recordId = company.id?.record_id;
+    if (recordId) {
+      const fullCompany = await getCompanyByRecordID(recordId);
+      results.push(fullCompany);
+    }
+  }
+
+  return results;
 }

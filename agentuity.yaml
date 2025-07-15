@@ -78,11 +78,8 @@ agents:
     name: clerk-agent
   - id: agent_b5a33e9bb883bd89230524e6e469c389
     name: stripe-agent
-
   - id: agent_2f0720ffe817764ca48a02af17a2cd2e
     name: payload-logger-agent
     description: logs payloads sent to it
-
   - id: agent_808e565a5edf05bb76f386e415682bce
     name: smartlead-agent
-
