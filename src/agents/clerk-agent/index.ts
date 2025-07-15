@@ -73,7 +73,7 @@ Companies store multiple organizations in a single \`orgId\` string field using 
 2. For each company found:
    - Check if the org name in the orgId string matches \`data.name\`
    - If the name is different, use \`updateOrgNameInCompany\` to update the org name in the orgId string
-   - If \`data.public_metadata.hasOnboarded\` is present, use \`updateCompany\` to update the \`hasOnboarded\` field
+   - If \`data.public_metadata.hasOnboarded\` is \`true\`, use \`updateCompany\` to update the \`hasOnboarded\` field to \`true\`
 3. Log all actions taken for debugging
 
 ## Error Handling:
