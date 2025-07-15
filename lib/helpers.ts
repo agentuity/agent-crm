@@ -51,3 +51,27 @@ export function addOrgToOrgIdString(existingOrgIdString: string | null | undefin
   existingOrgs.push({ name: newOrgName, id: newOrgId });
   return formatOrgIdString(existingOrgs);
 }
+
+// Helper function to update org name in orgId string by org ID
+export function updateOrgNameInOrgIdString(
+  existingOrgIdString: string | null | undefined, 
+  orgId: string, 
+  newOrgName: string
+): string | null {
+  const existingOrgs = parseOrgIdString(existingOrgIdString);
+  
+  // Find the org with matching ID
+  const orgIndex = existingOrgs.findIndex(org => org.id === orgId);
+  if (orgIndex === -1) {
+    return null; // Org ID not found in string
+  }
+  
+  // Update the name
+  const orgToUpdate = existingOrgs[orgIndex];
+  if (orgToUpdate) {
+    orgToUpdate.name = newOrgName;
+  }
+  
+  return formatOrgIdString(existingOrgs);
+}
+

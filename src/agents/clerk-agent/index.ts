@@ -18,6 +18,8 @@ Convert timestamps from Unix milliseconds to ISO strings if needed.
 - \`getCompanyByRecordID\` - Get company by Attio record ID
 - \`updateCompany\` - Update company fields
 - \`addOrgToCompany\` - Add organization to company's orgId field (handles string concatenation)
+- \`getCompaniesByOrgId\` - Find all companies that contain a specific organization ID in their orgId field
+- \`updateOrgNameInCompany\` - Update an organization's name in a company's orgId field based on org ID
 
 ## Organization ID Format
 Companies store multiple organizations in a single \`orgId\` string field using this format:
@@ -64,13 +66,15 @@ Companies store multiple organizations in a single \`orgId\` string field using 
 4. This will automatically append the new org to the existing orgId string
 
 ### organization.updated  
-**Data**: \`data.id\`, \`data.name\`, \`data.public_metadata.hasonboarded\`
+**Data**: \`data.id\` (org ID), \`data.name\` (org name), \`data.public_metadata.hasOnboarded\`
 
 **Steps**:
-1. Find companies that have this organization ID in their orgId string
-2. Use \`updateCompany\` with:
-   - \`hasOnboarded\`: \`data.public_metadata.hasonboarded\` 
-   - Update org name in orgId string if changed
+1. Use \`getCompaniesByOrgId\` with \`data.id\` to find all companies that have this organization ID in their orgId string
+2. For each company found:
+   - Check if the org name in the orgId string matches \`data.name\`
+   - If the name is different, use \`updateOrgNameInCompany\` to update the org name in the orgId string
+   - If \`data.public_metadata.hasOnboarded\` is present, use \`updateCompany\` to update the \`hasOnboarded\` field
+3. Log all actions taken for debugging
 
 ## Error Handling:
 - If person not found when expected, log warning and continue
