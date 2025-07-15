@@ -12,7 +12,7 @@ export const createAgent = (
     parameters: any;
   }[],
   toolExecutors: Record<string, Function>,
-  verifyWebhook?: (req: AgentRequest, resp: AgentResponse, ctx: AgentContext) => Promise<boolean>
+  verifyWebhook?: (rawBody: string, req: AgentRequest, resp: AgentResponse, ctx: AgentContext) => Promise<boolean>
 ) => {
   // tools is a map of tool names to functions
   return async function Agent(
@@ -20,18 +20,13 @@ export const createAgent = (
     resp: AgentResponse,
     ctx: AgentContext
   ) {
-    if (verifyWebhook) {
-      const result = await verifyWebhook(req, resp, ctx);
-      if (!result) {
-        console.log("Webhook verification failed");
+    try {
+      const rawBody = await req.data.text();
+      if (verifyWebhook && !(await verifyWebhook(rawBody, req, resp, ctx))) {
         return resp.json({ success: false, error: "Webhook verification failed" });
       }
-      else {
-        console.log("Webhook verification passed");
-      }
-    }
-    try {
-      const data = await req.data.text();
+
+      const data = rawBody;
       const executionLog = [];
       const maxIterations = 10; // Safety limit to prevent infinite loops
       let iteration = 0;

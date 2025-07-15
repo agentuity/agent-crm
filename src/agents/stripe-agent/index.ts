@@ -38,13 +38,12 @@ CONSTRAINTS:
 • Produce no extra commentary; the judge module will reject deviations.
 `;
 
-const verifyWebhook = async (req: AgentRequest, resp: AgentResponse, ctx: AgentContext) => {
+const verifyWebhook = async (rawBody: string, req: AgentRequest, resp: AgentResponse, ctx: AgentContext) => {
   const headers = req.get("headers") as Record<string, string>;
   const sigHeader = headers["stripe-signature"] ?? "";
-  const rawBuf = await req.data.text();
   try {
-    const event = stripe.webhooks.constructEvent(
-      rawBuf,
+    stripe.webhooks.constructEvent(
+      rawBody,
       sigHeader,
       process.env.STRIPE_SIGNING_SECRET ?? ""
     );

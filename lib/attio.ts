@@ -124,12 +124,12 @@ export async function getPersonByRecordID(recordId: string): Promise<any> {
 }
 
 // --- Company-related Functions ---
-
 export async function getCompanyByRecordID(recordId: string): Promise<any> {
   const company = await request(
     "GET",
     `/objects/companies/records/${recordId}`
   );
+  console.log(company);
   return company;
 }
 
