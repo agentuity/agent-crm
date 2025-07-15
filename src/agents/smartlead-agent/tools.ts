@@ -47,9 +47,10 @@ export const toolExecutors: Record<string, Function> = {
     slack_user_id: string;
   }) => {
     // TODO: Request from SmartLead API to get the lead status
-
     let smartlead_response = await getFromSmartLead(
-      `https://server.smartlead.ai/api/v1/leads/?email=${to_email}`
+      `https://server.smartlead.ai/api/v1/leads?email=${encodeURIComponent(
+        to_email.trim()
+      )}`
     );
     console.log("SmartLead data:", smartlead_response);
     let lead_status = smartlead_response?.custom_fields?.custom_lead_status;

@@ -17,7 +17,9 @@ export async function getFromSmartLead(
   if (!api_key) {
     throw new Error("SMARTLEAD_API_KEY environment variable is not set");
   }
-  const response = await fetch(url + `&api_key=${api_key}`);
+  const new_url = url + `&api_key=${api_key}`;
+  console.log("new_url:", new_url);
+  const response = await fetch(new_url);
   if (!response.ok) {
     throw new Error("Failed to get data from SmartLead");
   }
