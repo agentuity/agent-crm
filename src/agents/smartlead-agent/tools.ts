@@ -67,7 +67,7 @@ export const toolExecutors: Record<string, Function> = {
       throw new Error("SLACK_WEBHOOK environment variable is not set");
     }
     const payload = {
-      text: `<@NO> You have an email to look at in your inbox: ${to_email} from ${to_name} (${from_email})`,
+      text: `<@${slack_user_id}> You have an email to look at in your inbox (${to_email}) from ${from_email}`,
     };
     const res = await fetch(webhookUrl, {
       method: "POST",
