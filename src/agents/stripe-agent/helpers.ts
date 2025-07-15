@@ -96,7 +96,12 @@ export async function updateCompanyCredits(
   const companyId = getRecordIdFromRecord(companyRec);
   if (!companyId) throw new Error(`No companyId found for orgId=${orgId}`);
 
-  const existing = companyRec.data.values?.creditsBought?.value ?? 0;
+  const latest = (arr: any[]) => arr[arr.length - 1];
+
+  const raw = companyRec.data.values?.credits_bought;   // ← correct slug
+
+  const existing =
+    Array.isArray(raw) ? Number(latest(raw)?.value ?? 0) : raw?.value ?? 0;
 
   return updateCompany(
     companyId, 
