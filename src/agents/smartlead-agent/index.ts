@@ -28,15 +28,14 @@ You MUST fill out all parameters for each tool call.
 If the event_type is LEAD_CATEGORY_UPDATED, you should:
   - call the lead_category_updated tool with the following parameters:
     lead_email: lead_data.email
-    lead_first_name: lead_data.first_name
-    lead_last_name: lead_data.last_name
-    lead_company_name: lead_data.company_name
+    lead_first_name: lead_data.first_name or null
+    lead_last_name: lead_data.last_name or null
+    lead_company_name: lead_data.company_name or null
 
 If the event_type is EMAIL_REPLY, you should:
   - call the email_replied tool with the following parameters:
     from_email: from_email
     to_email: to_email
-    to_name: to_name
     slack_user_id: ("U08993W8V0T" if you think the from_email is Jeff Haynie's, "U088UL77GDV" if you think the from_email is for Rick Blalock's, or "U08993W8V0T" if you can't tell)
 `;
 

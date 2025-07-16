@@ -12,7 +12,12 @@ export const createAgent = (
     parameters: any;
   }[],
   toolExecutors: Record<string, Function>,
-  verifyWebhook?: (rawBody: string, req: AgentRequest, resp: AgentResponse, ctx: AgentContext) => Promise<boolean>
+  verifyWebhook?: (
+    rawBody: string,
+    req: AgentRequest,
+    resp: AgentResponse,
+    ctx: AgentContext
+  ) => Promise<boolean>
 ) => {
   // tools is a map of tool names to functions
   return async function Agent(
@@ -20,10 +25,14 @@ export const createAgent = (
     resp: AgentResponse,
     ctx: AgentContext
   ) {
+    ctx.logger.info("headers:", req.get("headers") as Record<string, string>);
     try {
       const rawBody = await req.data.text();
       if (verifyWebhook && !(await verifyWebhook(rawBody, req, resp, ctx))) {
-        return resp.json({ success: false, error: "Webhook verification failed" });
+        return resp.json({
+          success: false,
+          error: "Webhook verification failed",
+        });
       }
 
       const data = rawBody;

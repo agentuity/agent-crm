@@ -14,7 +14,6 @@ export const toolMetadataList = [
     parameters: {
       from_email: "string",
       to_email: "string",
-      to_name: "string",
       slack_user_id: "string",
     },
   },
@@ -24,9 +23,9 @@ export const toolMetadataList = [
       "This is the tool you should call when you receive a lead category updated event from SmartLead. You should only call this tool if the event_type is LEAD_CATEGORY_UPDATED.",
     parameters: {
       lead_email: "string",
-      lead_first_name: "string",
-      lead_last_name: "string",
-      lead_company_name: "string",
+      lead_first_name: "string or null",
+      lead_last_name: "string or null",
+      lead_company_name: "string or null",
     },
   },
 ];
@@ -38,12 +37,10 @@ export const toolExecutors: Record<string, Function> = {
   email_replied: async ({
     from_email,
     to_email,
-    to_name,
     slack_user_id,
   }: {
     from_email: string;
     to_email: string;
-    to_name: string;
     slack_user_id: string;
   }) => {
     // TODO: Request from SmartLead API to get the lead status
@@ -67,7 +64,7 @@ export const toolExecutors: Record<string, Function> = {
       throw new Error("SLACK_WEBHOOK environment variable is not set");
     }
     const payload = {
-      text: `<@${slack_user_id}> You have an email to look at in your inbox (${to_email}) from ${from_email}`,
+      text: `<@${slack_user_id}> You have an email to look at in your inbox (${from_email}) from ${to_email}`,
     };
     const res = await fetch(webhookUrl, {
       method: "POST",
@@ -86,9 +83,9 @@ export const toolExecutors: Record<string, Function> = {
     lead_company_name,
   }: {
     lead_email: string;
-    lead_first_name: string;
-    lead_last_name: string;
-    lead_company_name: string;
+    lead_first_name: string | null;
+    lead_last_name: string | null;
+    lead_company_name: string | null;
   }) => {
     // Add to Attio
     let person = await attio.getPersonByEmail(lead_email);
@@ -98,8 +95,8 @@ export const toolExecutors: Record<string, Function> = {
       console.log("No person found, asserting.");
       await attio.assertPerson({
         email: lead_email,
-        firstName: lead_first_name,
-        lastName: lead_last_name,
+        firstName: lead_first_name || undefined,
+        lastName: lead_last_name || undefined,
         leadSource: "SmartLead",
       });
       person = await attio.getPersonByEmail(lead_email);
@@ -122,7 +119,7 @@ export const toolExecutors: Record<string, Function> = {
         await attio.assertCompanyInPipeline(
           companyRecordId,
           personRecordId,
-          lead_company_name
+          lead_company_name || "Unknown Company"
         );
       }
     } else {
