@@ -59,8 +59,6 @@ export function getRecordIdFromPerson(person: any): string | null {
 
 // --- Person-related Functions ---
 export async function assertPerson(personInfo: PersonInfo): Promise<any> {
-  console.log('👤 Asserting person:', JSON.stringify(personInfo, null, 2));
-  
   // Always include email_addresses
   const values: any = {
     email_addresses: [
@@ -94,18 +92,11 @@ export async function assertPerson(personInfo: PersonInfo): Promise<any> {
       values,
     },
   };
-  
-  console.log('📤 Sending to Attio:', JSON.stringify(body, null, 2));
-  
-  const result = await request(
+  return await request(
     "PUT",
     `/objects/people/records?matching_attribute=email_addresses`,
     body
   );
-  
-  console.log('✅ Attio response:', JSON.stringify(result, null, 2));
-  
-  return result;
 }
 
 export async function getPersonByEmail(email: string): Promise<any> {
@@ -138,45 +129,32 @@ export async function getCompanyByRecordID(recordId: string): Promise<any> {
     "GET",
     `/objects/companies/records/${recordId}`
   );
-  console.log(company);
   return company;
 }
 
 export async function getCompanyByPersonEmail(email: string): Promise<any> {
   const person = await getPersonByEmail(email);
   
-  // Debug logging to understand the person structure
-  console.log('🔍 Getting company for person with email:', email);
-  console.log('📋 Full person response:', JSON.stringify(person, null, 2));
-  
   if (!person?.data || !Array.isArray(person.data) || person.data.length === 0) {
-    console.log('No person data found for email:', email);
     return null;
   }
   
   const personRecord = person.data[0];
-  console.log('Person record:', JSON.stringify(personRecord, null, 2));
-  
   const companyValue = personRecord?.values?.company;
-  console.log('Company value:', JSON.stringify(companyValue, null, 2));
   
   if (!companyValue || !Array.isArray(companyValue) || companyValue.length === 0) {
-    console.log('No company association found for person with email:', email);
     return null;
   }
   
   const companyId = companyValue[0]?.target_record_id;
-  console.log('Extracted company ID:', companyId);
   
   if (!companyId || typeof companyId !== 'string') {
-    console.log('Invalid or missing company record ID for email:', email);
     return null;
   }
   
   // Validate that the companyId looks like a UUID
   const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   if (!uuidRegex.test(companyId)) {
-    console.log('Company ID is not a valid UUID:', companyId);
     return null;
   }
   
@@ -306,8 +284,6 @@ export async function getCompanyByOrgId(orgId: string): Promise<any | null> {
 }
 
 export async function getCompaniesByOrgId(orgId: string): Promise<any[]> {
-  console.log('🔍 Searching for companies with orgId:', orgId);
-  
   // Get all companies since Attio doesn't support substring search on orgId field
   const queryBody = {}; // No filter to get all companies
 
@@ -317,45 +293,27 @@ export async function getCompaniesByOrgId(orgId: string): Promise<any[]> {
     queryBody
   );
 
-  if (!search?.data) {
-    console.log('❌ No company data returned from Attio');
-    return [];
-  }
-
-  console.log(`📊 Total companies in Attio: ${search.data.length}`);
+  if (!search?.data) return [];
 
   // Filter companies that have the orgId in their concatenated orgId string
   const matchingCompanies = search.data.filter((company: any) => {
     const orgIdValue = company?.values?.org_id?.[0]?.value;
     if (!orgIdValue || typeof orgIdValue !== 'string') return false;
     
-    console.log(`🔍 Checking company orgId string: "${orgIdValue}"`);
-    
     // Parse the orgId string and check if any org has the target ID
     const orgs = parseOrgIdString(orgIdValue);
-    console.log(`📋 Parsed orgs:`, orgs);
-    
-    const hasMatch = orgs.some(org => org.id === orgId);
-    if (hasMatch) {
-      console.log(`✅ Found match in company: ${company.id?.record_id}`);
-    }
-    
-    return hasMatch;
+    return orgs.some(org => org.id === orgId);
   });
-
-  console.log(`🎯 Found ${matchingCompanies.length} matching companies`);
 
   // Return full company records
   const results = [];
   for (const company of matchingCompanies) {
     const recordId = company.id?.record_id;
     if (recordId) {
-      console.log(`📥 Fetching full record for company: ${recordId}`);
       const fullCompany = await getCompanyByRecordID(recordId);
       results.push(fullCompany);
     }
   }
 
-  console.log(`📤 Returning ${results.length} full company records`);
   return results;
 }
