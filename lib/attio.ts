@@ -135,10 +135,42 @@ export async function getCompanyByRecordID(recordId: string): Promise<any> {
 
 export async function getCompanyByPersonEmail(email: string): Promise<any> {
   const person = await getPersonByEmail(email);
-  const companyId = person.data[0]?.values?.company[0]?.target_record_id;
-  if (!companyId) {
+  
+  // Debug logging to understand the person structure
+  console.log('Person data for email:', email);
+  console.log('Full person response:', JSON.stringify(person, null, 2));
+  
+  if (!person?.data || !Array.isArray(person.data) || person.data.length === 0) {
+    console.log('No person data found for email:', email);
     return null;
   }
+  
+  const personRecord = person.data[0];
+  console.log('Person record:', JSON.stringify(personRecord, null, 2));
+  
+  const companyValue = personRecord?.values?.company;
+  console.log('Company value:', JSON.stringify(companyValue, null, 2));
+  
+  if (!companyValue || !Array.isArray(companyValue) || companyValue.length === 0) {
+    console.log('No company association found for person with email:', email);
+    return null;
+  }
+  
+  const companyId = companyValue[0]?.target_record_id;
+  console.log('Extracted company ID:', companyId);
+  
+  if (!companyId || typeof companyId !== 'string') {
+    console.log('Invalid or missing company record ID for email:', email);
+    return null;
+  }
+  
+  // Validate that the companyId looks like a UUID
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (!uuidRegex.test(companyId)) {
+    console.log('Company ID is not a valid UUID:', companyId);
+    return null;
+  }
+  
   const company = await getCompanyByRecordID(companyId);
   return company;
 }
