@@ -36,13 +36,15 @@ Companies store multiple organizations in a single \`orgId\` string field using 
 **Steps**:
 1. Extract email from \`data.email_addresses[0].email_address\`
 2. Convert \`data.created_at\` from Unix milliseconds to ISO string
-3. Use \`assertPerson\` with:
+3. **Check if person already exists**: Use \`getPersonByEmail\` to see if they're already in Attio (e.g., from SmartLead)
+4. **Always use \`assertPerson\`** to create/update the person with:
    - \`email\`: extracted email
    - \`firstName\`: \`data.first_name\`
    - \`lastName\`: \`data.last_name\`
-   - \`userId\`: \`data.id\`
+   - \`userId\`: \`data.id\` (this will add/update the Clerk user ID for existing users)
    - \`accountCreationDate\`: converted timestamp
-4. If person has company domain, use \`getCompanyByPersonEmail\` to link them
+5. **Log the action**: Clearly log whether this was updating an existing person or creating a new one
+6. If person has company domain, use \`getCompanyByPersonEmail\` to link them
 
 ### user.updated
 **Data**: \`data.id\`, \`data.email_addresses\`, \`data.organization_memberships\`
