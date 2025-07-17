@@ -3,23 +3,23 @@ import { Composio } from "@composio/core";
 import { AnthropicProvider } from "@composio/anthropic";
 import { Anthropic } from "@anthropic-ai/sdk";
 
-const client = new Anthropic();
-
-const composio = new Composio({
-  apiKey: process.env.COMPOSIO_API_KEY,
-  provider: new AnthropicProvider(),
-});
-
-const tools = await composio.tools.get("nick", {
-  toolkits: ["ATTIO"],
-});
-
-export async function createAgent(prompt: string) {
+export const createAgent = (prompt: string) => {
   return async function Agent(
     req: AgentRequest,
     resp: AgentResponse,
     ctx: AgentContext
   ) {
+    const client = new Anthropic();
+
+    const composio = new Composio({
+      apiKey: process.env.COMPOSIO_API_KEY,
+      provider: new AnthropicProvider(),
+    });
+
+    const tools = await composio.tools.get("nick", {
+      toolkits: ["ATTIO"],
+    });
+
     const payload = await req.data.json();
 
     // Note: Need to specify attribute names for the tool call: the default for email is "email" but it should be "email_addresses"
@@ -165,4 +165,4 @@ Respond only with JSON:
 
     return resp.text("Ran out of iterations.");
   };
-}
+};
