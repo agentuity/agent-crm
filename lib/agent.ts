@@ -3,7 +3,7 @@ import { Composio } from "@composio/core";
 import { AnthropicProvider } from "@composio/anthropic";
 import { Anthropic } from "@anthropic-ai/sdk";
 
-export const createAgent = (prompt: string) => {
+export const createAgent = (prompt: string, extraTools: any[] = []) => {
   return async function Agent(
     req: AgentRequest,
     resp: AgentResponse,
@@ -20,6 +20,8 @@ export const createAgent = (prompt: string) => {
       toolkits: ["ATTIO"],
     });
 
+    console.log("tools: ", tools);
+
     const payload = await req.data.json();
 
     // Note: Need to specify attribute names for the tool call: the default for email is "email" but it should be "email_addresses"
@@ -35,26 +37,28 @@ export const createAgent = (prompt: string) => {
     while (iteration < maxIterations) {
       const response = await client.messages.create({
         model: "claude-3-5-sonnet-20240620",
-        tools,
+        tools: [...tools, ...extraTools],
         max_tokens: 1000,
         stream: false,
         messages: [
           {
             role: "user",
             content: `
-You will receive a JSON payload and a prompt to instruct you on what to do.
+You will receive a JSON payload and a prompt that describes what you need to do.
 
-Instructions:
+---
+
+📘 Instructions:
 ${prompt}
 
-JSON payload:
-${JSON.stringify(payload, null, 2)}
+---
 
-Your job is to use the provided tools to complete the instructions.
+📦 JSON Payload:
+${JSON.stringify(payload, null, 2)}
 
 ${
   previousToolCallResults.length > 0
-    ? `This is iteration ${iteration}. Here are the previous tool call results:\n${JSON.stringify(
+    ? `\n---\n🔁 Iteration ${iteration}\nPrevious tool call results:\n${JSON.stringify(
         previousToolCallResults,
         null,
         2
@@ -64,13 +68,21 @@ ${
 
 ${
   justRejected
-    ? `The Judge rejected the most recent tool calls: ${toolCalls}`
+    ? `\n---\n❌ The Judge rejected the most recent tool calls:\n${JSON.stringify(
+        toolCalls,
+        null,
+        2
+      )}`
     : ""
 }
 
 ${
   allToolCalls.length > 0
-    ? `Tool calls made so far:\n${JSON.stringify(allToolCalls, null, 2)}`
+    ? `\n---\n🛠️ Tool calls made so far:\n${JSON.stringify(
+        allToolCalls,
+        null,
+        2
+      )}`
     : ""
 }
 `,
@@ -84,7 +96,7 @@ ${
       if (toolCalls.length) {
         console.log("Tool calls", toolCalls);
       } else {
-        console.log("No tool calls");
+        console.log("No tool calls, done.");
         const textBlock = response.content.find(
           (block) => block.type === "text"
         );
@@ -123,8 +135,7 @@ ${JSON.stringify(toolCalls, null, 2)}
 Respond only with JSON:
 { 
   "decision":"approve" | "reject", 
-  "reason":"explain why you made this decision",
-  "toolCalls": 
+  "reason":"explain why you made this decision"
 }
 `,
           },
@@ -151,14 +162,16 @@ Respond only with JSON:
         continue;
       }
 
+      // If we get here, the Judge approved the tool calls.
       justRejected = false;
       rejectReason = "";
 
+      // Execute the tool calls.
       const toolCallResult = await composio.provider.handleToolCalls(
         "nick",
         response
       );
-      // console.log("resp", toolCallResult);
+
       previousToolCallResults.push(toolCallResult);
       iteration++;
     }

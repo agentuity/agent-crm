@@ -24,8 +24,15 @@ If the event_type is EMAIL_REPLY, the webhook will contain the following importa
 You MUST fill out all parameters for each tool call.
 
 If the event_type is LEAD_CATEGORY_UPDATED, you should:
-  - look up the lead in Attio by email.
-  - if the lead is not found, assert them, with their lead source set to "SmartLead".
+  1. call the ATTIO_FIND_RECORD tool with attributes: {"email_address": "<lead_data.email>"}
+    1a. If the lead is not found, use the ATTIO_CREATE_RECORD tool with the following attributes:
+        {
+          "email_address": "<lead_data.email>",
+          "first_name": "<lead_data.first_name>",
+          "last_name": "<lead_data.last_name>",
+          "full_name": "<lead_data.first_name> <lead_data.last_name>",
+          "lead_source": "SmartLead"
+        }
   - create a deal for the person's company if it does not already exist.
   - make the deal's owner rblalock@agentuity.com
   - add the lead to the associated person of the deal.
