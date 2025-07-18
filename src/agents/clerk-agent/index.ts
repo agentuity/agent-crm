@@ -1,5 +1,5 @@
 import { createAgent } from "../../../lib/agent";
-import { toolMetadata, toolExecutors } from "./tools";
+import { clerkExtraTools, clerkToolExecutors } from "./tools";
 
 const clerkWebhookPrompt = `
 You are processing webhooks from Clerk. 
@@ -11,12 +11,12 @@ Extract the primary email from \`data.email_addresses[0].email_address\`.
 Convert timestamps from Unix milliseconds to ISO strings if needed.
 
 ## Available Tools:
-- \`getPersonByEmail\` - Find person by email
-- \`getPersonByClerkID\` - Find person by Clerk user ID
-- \`assertPerson\` - Create/update person (upsert)
-- \`getCompanyByPersonEmail\` - Find company associated with person
-- \`getCompanyByRecordID\` - Get company by Attio record ID
-- \`updateCompany\` - Update company fields
+You have access to composio's ATTIO toolkit for basic operations:
+- Find records by email, ID, etc.
+- Create/update people and companies  
+- Update company fields
+
+Plus these custom tools for business logic:
 - \`addOrgToCompany\` - Add organization to company's orgId field (handles string concatenation)
 - \`getCompaniesByOrgId\` - Find all companies that contain a specific organization ID in their orgId field
 - \`updateOrgNameInCompany\` - Update an organization's name in a company's orgId field based on org ID
@@ -36,31 +36,31 @@ Companies store multiple organizations in a single \`orgId\` string field using 
 **Steps**:
 1. Extract email from \`data.email_addresses[0].email_address\`
 2. Convert \`data.created_at\` from Unix milliseconds to ISO string
-3. **Check if person already exists**: Use \`getPersonByEmail\` to see if they're already in Attio (e.g., from SmartLead)
-4. **Always use \`assertPerson\`** to create/update the person with:
+3. **Check if person already exists**: Use ATTIO tools to find person by email
+4. **Create/update the person** with:
    - \`email\`: extracted email
    - \`firstName\`: \`data.first_name\`
    - \`lastName\`: \`data.last_name\`
    - \`userId\`: \`data.id\` (this will add/update the Clerk user ID for existing users)
    - \`accountCreationDate\`: converted timestamp
 5. **Log the action**: Clearly log whether this was updating an existing person or creating a new one
-6. If person has company domain, use \`getCompanyByPersonEmail\` to link them
+6. If person has company domain, find their associated company to link them
 
 ### user.updated
 **Data**: \`data.id\`, \`data.email_addresses\`, \`data.organization_memberships\`
 
 **Steps**:
-1. Use \`getPersonByClerkID\` to find existing person
+1. Use ATTIO tools to find existing person by Clerk user ID
 2. If found, extract new email and team info
-3. Use \`assertPerson\` to update with new information
+3. Update person with new information
 4. If team changed, update associated company
 
 ### organization.created
 **Data**: \`data.id\` (org ID), \`data.name\` (org name), \`data.created_by\` (user ID who created it)
 
 **Steps**:
-1. Use \`getPersonByClerkID\` with \`data.created_by\` to find the user who created the organization
-2. Use \`getCompanyByPersonEmail\` to find their existing company (Attio auto-creates companies based on email domain)
+1. Use ATTIO tools to find the user who created the organization by Clerk user ID
+2. Find their existing company (Attio auto-creates companies based on email domain)
 3. Use \`addOrgToCompany\` with:
    - \`companyId\`: company record ID
    - \`orgName\`: \`data.name\`
@@ -75,7 +75,7 @@ Companies store multiple organizations in a single \`orgId\` string field using 
 2. For each company found:
    - Check if the org name in the orgId string matches \`data.name\`
    - If the name is different, use \`updateOrgNameInCompany\` to update the org name in the orgId string
-   - If \`data.public_metadata.hasOnboarded\` is \`true\`, use \`updateCompany\` to update the \`hasOnboarded\` field to \`true\`
+   - If \`data.public_metadata.hasOnboarded\` is \`true\`, use ATTIO tools to update the \`hasOnboarded\` field to \`true\`
 3. Log all actions taken for debugging
 
 ## Error Handling:
@@ -98,6 +98,11 @@ Companies store multiple organizations in a single \`orgId\` string field using 
 5. Use appropriate tools for orgId string manipulation
 6. Log all actions taken
 7. Handle errors gracefully without stopping the workflow
+
+## Important Notes:
+- Use the attribute name "email_addresses" (not "email") when working with ATTIO person records
+- Use the attribute name "user_id" for storing Clerk user IDs
+- When creating/updating people, always check for existing records first
 `;
 
-export default createAgent(clerkWebhookPrompt);
+export default createAgent(clerkWebhookPrompt, clerkExtraTools, clerkToolExecutors);

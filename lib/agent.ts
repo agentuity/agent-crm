@@ -6,6 +6,7 @@ import { Anthropic } from "@anthropic-ai/sdk";
 export const createAgent = (
   prompt: string, 
   extraTools: any[] = [], 
+  customToolExecutors: Record<string, Function> = {},
   verifyWebhook?: (
     rawBody: string,
     req: AgentRequest,
@@ -42,6 +43,9 @@ export const createAgent = (
     const payload = JSON.parse(rawBody); // parse it here because we read it as text for verification
 
     // Note: Need to specify attribute names for the tool call: the default for email is "email" but it should be "email_addresses"
+
+    // Create a set of custom tool names for quick lookup
+    const customToolNames = new Set(extraTools.map(tool => tool.name));
 
     const maxIterations = 10;
     let iteration = 0;
@@ -123,7 +127,7 @@ ${
       //JUDGE THE TOOL CALLS HERE
       const judgeResponse = await client.messages.create({
         model: "claude-3-5-sonnet-20240620",
-        tools,
+        tools: [...tools, ...extraTools],
         max_tokens: 1000,
         stream: false,
         messages: [
@@ -144,7 +148,7 @@ You must approve or reject the tool calls.
 - Make sure that the proposed tool calls are not dangerous.
 
 **Allowed tools**
-${JSON.stringify(tools, null, 2)}
+${JSON.stringify([...tools, ...extraTools], null, 2)}
 
 **Proposed calls**
 ${JSON.stringify(toolCalls, null, 2)}
@@ -183,13 +187,86 @@ Respond only with JSON:
       justRejected = false;
       rejectReason = "";
 
-      // Execute the tool calls.
-      const toolCallResult = await composio.provider.handleToolCalls(
-        "nick",
-        response
-      );
+      // Separate custom tools from composio tools
+      const customToolCalls = toolCalls.filter((call: any) => customToolNames.has(call.name));
+      const composioToolCalls = toolCalls.filter((call: any) => !customToolNames.has(call.name));
+
+      let toolCallResult: any = {};
+
+      // Execute custom tools
+      if (customToolCalls.length > 0) {
+        console.log("Executing custom tools:", customToolCalls);
+        const customResults: any[] = [];
+        
+        for (const toolCall of customToolCalls) {
+          const executor = customToolExecutors[toolCall.name];
+          if (executor) {
+            try {
+              const result = await executor(toolCall.input);
+              customResults.push({
+                tool_call_id: toolCall.id,
+                type: "tool_result",
+                content: JSON.stringify(result)
+              });
+            } catch (error) {
+              customResults.push({
+                tool_call_id: toolCall.id,
+                type: "tool_result", 
+                content: `Error: ${error instanceof Error ? error.message : 'Unknown error'}`
+              });
+            }
+          } else {
+            customResults.push({
+              tool_call_id: toolCall.id,
+              type: "tool_result",
+              content: `Error: No executor found for tool ${toolCall.name}`
+            });
+          }
+        }
+        
+        if (composioToolCalls.length === 0) {
+          // Only custom tools, return custom results
+          toolCallResult = customResults;
+        } else {
+          // Both custom and composio tools, we'll merge results
+          toolCallResult.customResults = customResults;
+        }
+      }
+
+      // Execute composio tools if any
+      if (composioToolCalls.length > 0) {
+        console.log("Executing composio tools:", composioToolCalls);
+        
+        // Create a response-like object with only composio tool calls
+        const composioResponse = {
+          ...response,
+          content: response.content.map((block: any) => {
+            if (block.type === "tool_use" && composioToolCalls.some((call: any) => call.id === block.id)) {
+              return block;
+            }
+            return block.type === "tool_use" ? null : block;
+          }).filter(Boolean)
+        };
+
+        const composioResult = await composio.provider.handleToolCalls(
+          "nick",
+          composioResponse
+        );
+
+        if (customToolCalls.length === 0) {
+          // Only composio tools
+          toolCallResult = composioResult;
+        } else {
+          // Both custom and composio tools, merge results
+          toolCallResult = {
+            ...composioResult,
+            customResults: toolCallResult.customResults
+          };
+        }
+      }
 
       previousToolCallResults.push(toolCallResult);
+      allToolCalls.push(...toolCalls);
       iteration++;
     }
 
