@@ -60,12 +60,13 @@ If the event_type is LEAD_CATEGORY_UPDATED, you should:
       "values": {
         "name": "Deal with <lead_data.company_name>",
         "stage": "Lead",
-        "owner": "rblalock@agentuity.com",
+        "owner": "nmirigliani@agentuity.com",
         "value": 0,
         "associated_people": [personRecordId],
         "associated_company": companyRecordId,
       }
     }
+    You should recieve the record that you created.
 
 If the event_type is EMAIL_REPLY, you should:
   - look up the person in Attio by email.

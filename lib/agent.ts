@@ -147,6 +147,7 @@ And a list of allowed tools and their parameters.
 You must approve or reject the tool calls.
 
 **Approval rules**
+- **IMPORTANT**: IGNORE THE STRUCTURE OF NESTED OBJECTS.
 - Make sure that the tool calls are in the correct format.
 - Make sure that the proposed tool calls are within the allowed tools.
 - Make sure that the proposed tool calls use the correct arguments for the tool.
