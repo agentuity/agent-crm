@@ -73,4 +73,4 @@ If the event_type is EMAIL_REPLY, you should:
 
 export default createAgent(prompt);
 
-// {"email_addresses": ["nickmirig@gmail.com"]}
+// {"email_addresses": ["nmirigliani@agentuity.com"]}

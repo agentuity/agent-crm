@@ -4,14 +4,14 @@ import { AnthropicProvider } from "@composio/anthropic";
 import { Anthropic } from "@anthropic-ai/sdk";
 
 export const createAgent = (
-  prompt: string, 
-  extraTools: any[] = [], 
+  prompt: string,
+  extraTools: any[] = [],
   verifyWebhook?: (
     rawBody: string,
     req: AgentRequest,
     resp: AgentResponse,
     ctx: AgentContext
-  ) => Promise<boolean> 
+  ) => Promise<boolean>
 ) => {
   return async function Agent(
     req: AgentRequest,
@@ -25,7 +25,7 @@ export const createAgent = (
         error: "Webhook verification failed.",
       });
     }
-    
+
     const client = new Anthropic();
 
     const composio = new Composio({
@@ -37,12 +37,9 @@ export const createAgent = (
       toolkits: ["ATTIO"],
     });
 
-    console.log("tools: ", tools);
-
     const payload = JSON.parse(rawBody); // parse it here because we read it as text for verification
 
     // Note: Need to specify attribute names for the tool call: the default for email is "email" but it should be "email_addresses"
-
     const maxIterations = 10;
     let iteration = 0;
     let previousToolCallResults: any[] = [];
@@ -110,6 +107,18 @@ ${
       // Claude returns a list of content blocks in `response.content`
       toolCalls = response.content.filter((block) => block.type === "tool_use");
 
+      // Log text responses to see LLM's reasoning
+      const textBlocks = response.content.filter(
+        (block) => block.type === "text"
+      );
+      if (textBlocks.length > 0) {
+        console.log(`--- Iteration ${iteration} Text Response ---`);
+        textBlocks.forEach((block, index) => {
+          console.log(block.text);
+        });
+        console.log("--- End Text Response ---");
+      }
+
       if (toolCalls.length) {
         console.log("Tool calls", toolCalls);
       } else {
@@ -173,6 +182,9 @@ Respond only with JSON:
       }
       if (!judgeDecision) return resp.text("No judge decision.");
       if (judgeDecision.decision === "reject") {
+        console.log(
+          `Judge rejected the tool calls. Reason: ${judgeDecision.reason}`
+        );
         justRejected = true;
         rejectReason = judgeDecision.reason;
         iteration++;
@@ -188,6 +200,11 @@ Respond only with JSON:
         "nick",
         response
       );
+
+      // Log tool call results to see what the tools return
+      console.log(`--- Iteration ${iteration} Tool Call Results ---`);
+      console.log(JSON.stringify(toolCallResult, null, 2));
+      console.log("--- End Tool Call Results ---");
 
       previousToolCallResults.push(toolCallResult);
       iteration++;
