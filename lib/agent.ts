@@ -3,12 +3,29 @@ import { Composio } from "@composio/core";
 import { AnthropicProvider } from "@composio/anthropic";
 import { Anthropic } from "@anthropic-ai/sdk";
 
-export const createAgent = (prompt: string, extraTools: any[] = []) => {
+export const createAgent = (
+  prompt: string, 
+  extraTools: any[] = [], 
+  verifyWebhook?: (
+    rawBody: string,
+    req: AgentRequest,
+    resp: AgentResponse,
+    ctx: AgentContext
+  ) => Promise<boolean> 
+) => {
   return async function Agent(
     req: AgentRequest,
     resp: AgentResponse,
     ctx: AgentContext
   ) {
+    const rawBody = await req.data.text();
+    if (verifyWebhook && !verifyWebhook(rawBody, req, resp, ctx)) {
+      return resp.json({
+        success: false,
+        error: "Webhook verification failed.",
+      });
+    }
+    
     const client = new Anthropic();
 
     const composio = new Composio({
@@ -22,7 +39,7 @@ export const createAgent = (prompt: string, extraTools: any[] = []) => {
 
     console.log("tools: ", tools);
 
-    const payload = await req.data.json();
+    const payload = JSON.parse(rawBody); // parse it here because we read it as text for verification
 
     // Note: Need to specify attribute names for the tool call: the default for email is "email" but it should be "email_addresses"
 
