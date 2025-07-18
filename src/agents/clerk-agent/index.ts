@@ -100,5 +100,4 @@ Companies store multiple organizations in a single \`orgId\` string field using 
 7. Handle errors gracefully without stopping the workflow
 `;
 
-export default createAgent(clerkWebhookPrompt, toolMetadata, toolExecutors);
-
+export default createAgent(clerkWebhookPrompt);

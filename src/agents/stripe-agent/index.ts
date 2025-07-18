@@ -2,8 +2,9 @@ import type { AgentRequest, AgentResponse, AgentContext } from "@agentuity/sdk";
 import { createAgent } from "../../../lib/agent";
 import { toolExecutors, toolMetadataList } from "./tools";
 import Stripe from "stripe";
-const stripe = new Stripe(process.env.STRIPE_API_KEY ?? "", { apiVersion: "2025-06-30.basil" });
-
+const stripe = new Stripe(process.env.STRIPE_API_KEY ?? "", {
+  apiVersion: "2025-06-30.basil",
+});
 
 const prompt = `
 You are an automated backend agent that handles **Stripe \`charge.succeeded\`**
@@ -38,7 +39,12 @@ CONSTRAINTS:
 • Produce no extra commentary; the judge module will reject deviations.
 `;
 
-const verifyWebhook = async (rawBody: string, req: AgentRequest, resp: AgentResponse, ctx: AgentContext) => {
+const verifyWebhook = async (
+  rawBody: string,
+  req: AgentRequest,
+  resp: AgentResponse,
+  ctx: AgentContext
+) => {
   const headers = req.get("headers") as Record<string, string>;
   const sigHeader = headers["stripe-signature"] ?? "";
   try {
@@ -54,9 +60,4 @@ const verifyWebhook = async (rawBody: string, req: AgentRequest, resp: AgentResp
   }
 };
 
-export default createAgent(
-  prompt,
-  toolMetadataList,
-  toolExecutors,
-  verifyWebhook
-);
+export default createAgent(prompt);
