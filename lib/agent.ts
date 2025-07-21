@@ -6,6 +6,7 @@ import { Anthropic } from "@anthropic-ai/sdk";
 export const createAgent = (
   prompt: string, 
   extraTools: any[] = [], 
+  extraExecutors: Record<string, (...args:any)=>any> = {},
   verifyWebhook?: (
     rawBody: string,
     req: AgentRequest,
