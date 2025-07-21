@@ -34,7 +34,7 @@ export const createAgent = (
     });
 
     const tools = await composio.tools.get("nick", {
-      toolkits: ["ATTIO"],
+      toolkits: ["ATTIO", "STRIPE"],
     });
 
     console.log("tools: ", tools);
