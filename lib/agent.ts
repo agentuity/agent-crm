@@ -33,9 +33,10 @@ export const createAgent = (
       provider: new AnthropicProvider(),
     });
 
-    const tools = await composio.tools.get("nick", {
-      toolkits: ["ATTIO"],
-    });
+    const attioTools  = await composio.tools.get("nick",    { toolkits: ["ATTIO"]  });
+    const stripeTools = await composio.tools.get("default", { toolkits: ["STRIPE"] });  
+
+    const tools = [...attioTools, ...stripeTools, ...extraTools];
 
     console.log("tools: ", tools);
 
@@ -54,7 +55,7 @@ export const createAgent = (
     while (iteration < maxIterations) {
       const response = await client.messages.create({
         model: "claude-3-5-sonnet-20240620",
-        tools: [...tools, ...extraTools],
+        tools,
         max_tokens: 1000,
         stream: false,
         messages: [
