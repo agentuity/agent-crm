@@ -184,13 +184,30 @@ Respond only with JSON:
       justRejected = false;
       rejectReason = "";
 
-      // Execute the tool calls.
-      const toolCallResult = await composio.provider.handleToolCalls(
-        "nick",
-        response
-      );
+      for (const c of toolCalls) {
+        const localExec = extraExecutors[c.name as string];
+        if (!localExec) continue;              // not one of our helpers
 
-      previousToolCallResults.push(toolCallResult);
+        try {
+          const result = await localExec(c.args ?? {});
+          previousToolCallResults.push({ name: c.name, result });
+          c.__handledLocally = true;           // mark so we don’t resend
+        } catch (err) {
+          return resp.text(
+            `Helper ${c.name} threw an error: ${String(err)}`
+          );
+        }
+      }
+
+      const remoteCalls = toolCalls.filter(t => !t.__handledLocally);
+      if (remoteCalls.length) {
+        const partialResponse = { ...response, content: remoteCalls };
+        const remoteResult = await composio.provider.handleToolCalls(
+          "nick",
+          partialResponse
+        );
+        previousToolCallResults.push(remoteResult);
+      }
       iteration++;
     }
 
