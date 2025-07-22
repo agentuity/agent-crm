@@ -34,7 +34,7 @@ export const createAgent = (
       provider: new AnthropicProvider(),
     });
 
-    const tools = await composio.tools.get("nick", {
+    const tools = await composio.tools.get("joel", {
       toolkits: ["ATTIO", "STRIPE"],
     });
 
@@ -249,7 +249,7 @@ Respond only with JSON:
         };
 
         const composioResult = await composio.provider.handleToolCalls(
-          "nick",
+          "joel",
           composioResponse
         );
 
