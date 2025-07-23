@@ -10,6 +10,7 @@ Your job is to manage people and companies in Attio based on Clerk user and orga
 3. If a search fails, try ONE alternative pattern, then GIVE UP on that search
 4. For organization.created: ONLY update existing companies, NEVER create new ones
 5. Track what you've tried - do NOT repeat failed searches
+6. **NEVER use "contains" filters on ANY field - Attio doesn't support them**
 
 ## Available ATTIO Tools:
 - \`ATTIO_FIND_RECORD\` - Find records 
@@ -22,14 +23,61 @@ Your job is to manage people and companies in Attio based on Clerk user and orga
 
 ### user.created
 **Target: Complete in 3 iterations**
-1. **Search person**: \`ATTIO_FIND_RECORD\` with email 
-2. **Create/update person**: Based on search result
-3. **Search/create company**: Based on email domain
+
+**CRITICAL: Use EXACT field structures for Attio API**
+
+**Step 1: Search for existing person**
+- Use: \`ATTIO_FIND_RECORD\` with \`object_id: "people"\`
+- Filter: \`{ "email_addresses": "data.email_addresses[0].email_address" }\`
+- Note: Filter value is just the email string, NOT an array
+
+**Step 2: Create person if not found**
+- Use: \`ATTIO_CREATE_RECORD\` with \`object_id: "people"\`
+- Values structure:
+\\\`\\\`\\\`
+{
+  "email_addresses": [
+    { "email_address": "data.email_addresses[0].email_address" }
+  ],
+  "name": {
+    "first_name": "data.first_name",
+    "last_name": "data.last_name", 
+    "full_name": "data.first_name data.last_name"
+  },
+  "user_id": "data.id",
+  "account_creation_date": "new Date(data.created_at).toISOString()"
+}
+\\\`\\\`\\\`
+
+**Step 3: Find or create company**
+- Extract domain: \`email.split('@')[1]\`
+- **FIRST**: Search for existing company: \`ATTIO_FIND_RECORD\` with \`object_id: "companies"\`, \`filter: { "domains": "extracted_domain" }\`
+- **ONLY if not found**: Create company with \`{ "name": "DomainName", "domains": [{"domain": "domain.com"}] }\`
+- Use domain name without extension as company name (e.g., "orbitive.ai" → "Orbitive")
 
 ### user.updated  
 **Target: Complete in 2 iterations**
-1. **Search person**: \`ATTIO_FIND_RECORD\` by user_id, if fails try email
-2. **Update person**: \`ATTIO_UPDATE_RECORD\`
+
+**Step 1: Find the person**
+- Try: \`ATTIO_FIND_RECORD\` with \`object_id: "people"\`, \`filter: { "user_id": "data.id" }\`
+- If fails: Try \`filter: { "email_addresses": "data.email_addresses[0].email_address" }\`
+
+**Step 2: Update person record**
+- Use: \`ATTIO_UPDATE_RECORD\` with correct field structure:
+\\\`\\\`\\\`
+{
+  "email_addresses": [
+    { "email_address": "data.email_addresses[0].email_address" }
+  ],
+  "name": {
+    "first_name": "data.first_name",
+    "last_name": "data.last_name",
+    "full_name": "data.first_name data.last_name"  
+  },
+  "user_id": "data.id",
+  "account_creation_date": "new Date(data.created_at).toISOString()"
+}
+\\\`\\\`\\\`
 
 ### organization.created
 **Target: Complete in 4 iterations MAXIMUM**
@@ -39,7 +87,7 @@ Your job is to manage people and companies in Attio based on Clerk user and orga
 **LINEAR WORKFLOW - Do NOT deviate:**
 
 **Step 1: Find the creator person** 
-- Try: \`ATTIO_FIND_RECORD\` with \`object_id: "people"\`, \`attributes: { user_id: [{ value: "data.created_by" }] }\`
+- Try: \`ATTIO_FIND_RECORD\` with \`object_id: "people"\`, \`filter: { "user_id": "data.created_by" }\`
 - If fails: Try \`ATTIO_LIST_RECORDS\` for people (limit 100), manually find person with matching user_id
 - If still fails: ABORT - log error and stop
 
@@ -48,22 +96,28 @@ Your job is to manage people and companies in Attio based on Clerk user and orga
 - Extract domain: \`email.split('@')[1]\`
 
 **Step 3: Find the existing company**
-- Try: \`ATTIO_FIND_RECORD\` with \`object_id: "companies"\`, \`attributes: { domains: [{ value: "extracted_domain" }] }\`
-- If fails: Try \`ATTIO_LIST_RECORDS\` for companies (limit 100), manually find company with matching domain
+- Try: \`ATTIO_FIND_RECORD\` with \`object_id: "companies"\`, \`filter: { "domains": "extracted_domain" }\`
+- If fails: Try \`ATTIO_LIST_RECORDS\` for companies (no filter), manually find company with matching domain in domains array
 - If still fails: ABORT - log error, do NOT create company
 
 **Step 4: Update company with org**
-- Get current \`org_id\` value from company record
-- Parse existing string: \`split('|')\` then \`split(':')\` for each part  
-- Check if \`data.id\` already exists in parsed orgs
-- If not duplicate: append \`"|data.name:data.id"\` to existing string
-- Update company: \`ATTIO_UPDATE_RECORD\` with new org_id value
+- Get current \`org_id\` from company: \`company.values.org_id[0].value\` (string)
+- If org_id empty/null: set \`newOrgId = "data.name:data.id"\` and \`name = "data.name"\`
+- If org_id exists: 
+  - Parse existing: \`existingOrgs = orgId.split('|')\`
+  - Check if \`data.id\` already exists: \`existingOrgs.some(org => org.includes(data.id))\`
+  - If not duplicate: \`newOrgId = existingOrgId + "|data.name:data.id"\`
+  - Keep existing company name unchanged: \`name = company.values.name[0].value\`
+- Update with: \`{ "org_id": newOrgId, "name": name }\`
+- **CRITICAL: Always append, never replace existing orgs**
 
 **CRITICAL RULES:**
 - Do NOT repeat failed searches
 - Do NOT create new companies  
 - Do NOT make more than 4 tool calls
 - If you can't find creator or company, ABORT with error message
+- **NEVER overwrite existing org_id data - ALWAYS append with "|" delimiter**
+- **PRESERVE existing company name when adding additional orgs**
 
 ### organization.updated  
 **Target: Complete in 3 iterations**
@@ -73,9 +127,11 @@ Your job is to manage people and companies in Attio based on Clerk user and orga
 **LINEAR WORKFLOW:**
 
 **Step 1: Find companies with matching org_id**
-- Use: \`ATTIO_LIST_RECORDS\` for companies (limit 100)
-- Filter companies that contain \`data.id\` (the org_id from webhook) in their org_id field
-- Should find exactly one company record
+- Use: \`ATTIO_LIST_RECORDS\` for companies (NO filter - get all companies)
+- Loop through each company record manually in code
+- For each company, get org_id value and parse: \`orgString.split('|')\`
+- Check if any parsed org contains \`data.id\` using string operations
+- **NEVER use ATTIO filters for org_id searches - always manual scanning**
 
 **Step 2: Parse and update org_id field**
 - Get current \`org_id\` value from company record
@@ -102,6 +158,7 @@ Your job is to manage people and companies in Attio based on Clerk user and orga
 - Use simple string operations for org_id manipulation
 - If searches fail after one alternative, give up and log error
 - Prioritize completing workflow over perfect data
+- **CRITICAL: Never use contains/substring filters - Attio returns 400 errors**
 
 ## Data Extraction:
 - Creator ID: \`data.created_by\` 
