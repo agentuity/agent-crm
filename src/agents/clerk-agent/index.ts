@@ -67,9 +67,34 @@ Your job is to manage people and companies in Attio based on Clerk user and orga
 
 ### organization.updated  
 **Target: Complete in 3 iterations**
-1. **Find companies**: \`ATTIO_LIST_RECORDS\` for companies
-2. **Filter and parse**: Find companies with matching org_id in string
-3. **Update companies**: Modify org data and update records
+
+**CRITICAL: This updates an existing organization's name. Find the company and update both the company name AND the org_id field.**
+
+**LINEAR WORKFLOW:**
+
+**Step 1: Find companies with matching org_id**
+- Use: \`ATTIO_LIST_RECORDS\` for companies (limit 100)
+- Filter companies that contain \`data.id\` (the org_id from webhook) in their org_id field
+- Should find exactly one company record
+
+**Step 2: Parse and update org_id field**
+- Get current \`org_id\` value from company record
+- Parse existing string: \`orgString.split('|')\` to get array of "name:id" pairs
+- Find the pair containing \`data.id\`: \`pairs.find(pair => pair.includes(data.id))\`
+- Replace that pair with \`"[data.name]:[data.id]"\` format
+- Rejoin: \`updatedPairs.join('|')\`
+
+**Step 3: Update company record**
+- Update company with:
+  - \`name\`: \`data.name\` (the new organization name)
+  - \`org_id\`: the updated org_id string from Step 2
+- Use: \`ATTIO_UPDATE_RECORD\`
+
+**Example:**
+- Webhook: \\\`{"data": {"id": "org_zentrix_001", "name": "Zentrix Global Security"}}\\\`
+- Current org_id: \\\`"Zentrix Security:org_zentrix_001|Other Org:other_id"\\\`
+- Updated org_id: \\\`"Zentrix Global Security:org_zentrix_001|Other Org:other_id"\\\`
+- Company name: \\\`"Zentrix Global Security"\\\`
 
 ## Efficiency Rules:
 - Count your iterations - stop at limit
