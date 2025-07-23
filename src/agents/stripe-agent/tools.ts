@@ -1,50 +1,56 @@
-import { z } from "zod";
-import fromZodSchema from "zod-to-json-schema";
-
-import { getOrgIdFromCustomer, recordStripeCharge } from "./helpers";
+import { latestAttioNumber, getOrgIdFromCustomer } from "./helpers";
 
 // Tool metadata
-export const toolMetadataList = [
+  export const toolMetadataList = [
   {
-    name: "getOrgIdFromCustomer",
-    description:
-      "Given a Stripe customer ID, fetch the customer via Stripe API and return metadata.orgId.",
-    parameters: fromZodSchema(
-      z.object({
-        stripeCustomerId: z.string().startsWith("cus_"),
-      })
-    ),
+    name: 'getOrgIdFromCustomer',
+    description: 'Fetch a Stripe customer and return `metadata.orgId`.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        customerId: {
+          type: 'string',
+          description: 'The Stripe customer ID (begins with "cus_").',
+          title: 'Stripe Customer ID',
+          examples: ['cus_K9q0xABC1234'],
+        },
+      },
+      required: ['customerId'],
+      title: 'GetOrgIdFromCustomerRequest',
+    },
+    cache_control: undefined,
   },
   {
-    name: "recordStripeCharge",
+    name: 'latestAttioNumber',
     description:
-      "Add the charge amount (in cents) to the company’s creditsBought and stamp lastCreditPurchase.",
-    parameters: fromZodSchema(
-      z.object({
-        orgId: z.string().min(1),
-        amount: z.number().int().positive(),
-        timestamp: z.number().int().positive(), // unix seconds
-      })
-    ),
+      'Return the latest numeric value from an Attio scalar or history-array field.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        field: {
+          description:
+            'Raw Attio field value (scalar number | string | history-array entry).',
+          title: 'Attio Field',
+        },
+      },
+      required: ['field'],
+      title: 'LatestAttioNumberRequest',
+    },
+    cache_control: undefined,
   },
 ];
 
 // Tool executors
-export const toolExecutors: Record<string, Function> = {
-
+export const toolExecutors: Record<string, (...args: any) => any> = {
   getOrgIdFromCustomer: async ({
-    stripeCustomerId,
+    customerId,
   }: {
-    stripeCustomerId: string;
-  }) => getOrgIdFromCustomer(stripeCustomerId),
-
-  recordStripeCharge: async ({
-    orgId,
-    amount,
-    timestamp,
+    customerId: string;
+  }) => getOrgIdFromCustomer(customerId),
+  
+  latestAttioNumber: async ({ 
+    field,
   }: {
-    orgId: string;
-    amount: number;
-    timestamp: number;
-  }) => recordStripeCharge(orgId, amount, timestamp),
+    field: any;
+  }) => latestAttioNumber(field),
 };
