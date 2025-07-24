@@ -46,7 +46,7 @@ export const createAgent = (
     ];
 
     const allTools = await composio.tools.get("joel", {
-      tools: ["ATTIO", "SLACK"],
+      toolkits: ["ATTIO", "SLACK"],
     });
 
     const tools = allTools.filter((t) => REQUIRED_TOOLS.includes(t.name));
@@ -126,7 +126,9 @@ ${
       // Claude returns a list of content blocks in `response.content`
       toolCalls = response.content.filter((block) => block.type === "tool_use");
 
-      if (toolCalls.length === 0) {
+      if (toolCalls.length) {
+        // console.log("Tool calls", toolCalls);
+      } else {
         console.log("No tool calls, done.");
         const textBlock = response.content.find(
           (block) => block.type === "text"
@@ -192,7 +194,6 @@ Respond ONLY with the JSON decision object, no other text:
       if (judgeDecision.decision === "reject") {
         justRejected = true;
         rejectReason = judgeDecision.reason;
-        console.log("Rejected tool calls:", toolCalls);
         iteration++;
         continue;
       }
