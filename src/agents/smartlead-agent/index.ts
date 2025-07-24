@@ -1,4 +1,5 @@
 import { createAgent } from "../../../lib/agent";
+import { toolMetadataList, toolExecutors } from "./tools";
 
 const prompt = `
 You are receiving email webhooks from SmartLead. You are responsible for managing people in Attio based on email interactions.
@@ -91,10 +92,36 @@ If the event_type is LEAD_CATEGORY_UPDATED, you should:
       }
     The goal is to add the person to the existing deal.
 
+  4. Finally, call the SMARTLEAD_SET_LEAD_STATUS_POSITIVE with input:
+  {
+    "email": "<lead_data.email>"
+  }
+
 If the event_type is EMAIL_REPLY, you should:
-  - look up the person in Attio by email.
+  1. call the SMARTLEAD_GET_LEAD_STATUS tool with input:
+  {
+    "email": "<to_email>"
+  }
+  1a. If the lead status is "positive", call the SLACK_SENDS_A_MESSAGE_TO_A_SLACK_CHANNEL tool.
+  The message should be *exactly*:
+
+  "<@ID>, you have an email to look at in your inbox (<from_email>) from <to_name> (<to_email>)."
+
+  where ID is the user id of the person who should receive the message. You must determine this to be either Matthew Congrove, Jeff Haynie, or Rick Blalock based on the from_email.
+  The ids are:
+  - Matthew Congrove: U08A0FWLM24
+  - Jeff Haynie: U08993W8V0T
+  - Rick Blalock: U088UL77GDV
+  You must keep the ids in the format <@ID> including the "<@" and ">".
+  {
+    "channel": "C091N1Z5Q3Y",
+    "text": "<message you created based on the rules above>"
+  }
+  1b. If the lead status is not "positive" (including empty reply or nothing), do nothing.
+  
+  After Step 1, you should have sent a message to the appropriate person. Once you have done this, you should stop.
 `;
 
-export default createAgent(prompt);
+export default createAgent(prompt, toolMetadataList, toolExecutors);
 
 // {"email_addresses": ["nmirigliani@agentuity.com"]}

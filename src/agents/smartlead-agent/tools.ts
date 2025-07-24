@@ -64,17 +64,39 @@ export const toolMetadataList = [
     name: "SMARTLEAD_GET_LEAD_STATUS",
     description:
       "Get the lead status from SmartLead for a given email address.",
-    parameters: {
-      email: "string",
+    input_schema: {
+      type: "object",
+      properties: {
+        email: {
+          type: "string",
+          description: "The email address of the lead to check.",
+          title: "Lead Email",
+          examples: ["john.doe@example.com"],
+        },
+      },
+      required: ["email"],
+      title: "GetLeadStatusRequest",
     },
+    cache_control: undefined,
   },
   {
     name: "SMARTLEAD_SET_LEAD_STATUS_POSITIVE",
     description:
-      "Set the lead status to 'positive' in SmartLead for a given email address.",
-    parameters: {
-      email: "string",
+      'Set the lead status to "positive" in SmartLead for a given email address.',
+    input_schema: {
+      type: "object",
+      properties: {
+        email: {
+          type: "string",
+          description: "The email address of the lead to update.",
+          title: "Lead Email",
+          examples: ["john.doe@example.com"],
+        },
+      },
+      required: ["email"],
+      title: "SetLeadStatusPositiveRequest",
     },
+    cache_control: undefined,
   },
 ];
 
