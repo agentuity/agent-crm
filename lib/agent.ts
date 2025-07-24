@@ -57,7 +57,7 @@ export const createAgent = (
 
     while (iteration < maxIterations) {
       const response = await client.messages.create({
-        model: "claude-3-5-sonnet-20240620",
+        model: "claude-3-5-haiku-20241022", // Using cheaper Haiku model - 3x cost savings
         tools: [...tools, ...extraTools],
         max_tokens: 1000,
         stream: false,
@@ -126,20 +126,20 @@ ${
 
       //JUDGE THE TOOL CALLS HERE
       const judgeResponse = await client.messages.create({
-        model: "claude-3-5-sonnet-20240620",
-        tools: [...tools, ...extraTools],
+        model: "claude-3-5-haiku-20241022", // Using cheaper Haiku for judge too
+        // Removed tools - judge should only return text, not make tool calls
         max_tokens: 1000,
         stream: false,
         messages: [
           {
             role: "user",
             content: `
-You are the Judge. You are given an array of tool calls of the form:
-{ tool: "toolName", args: { /* arguments */ } }
+You are the Judge. You are given an array of tool calls and a list of allowed tools.
 
-And a list of allowed tools and their parameters.
-
-You must approve or reject the tool calls.
+You must approve or reject the tool calls by responding ONLY with valid JSON in this exact format:
+{ "decision": "approve", "reason": "explanation" }
+OR
+{ "decision": "reject", "reason": "explanation" }
 
 **Approval rules**
 - Make sure that the tool calls are in the correct format.
@@ -153,11 +153,7 @@ ${JSON.stringify([...tools, ...extraTools], null, 2)}
 **Proposed calls**
 ${JSON.stringify(toolCalls, null, 2)}
 
-Respond only with JSON:
-{ 
-  "decision":"approve" | "reject", 
-  "reason":"explain why you made this decision"
-}
+Respond ONLY with the JSON decision object, no other text:
 `,
           },
         ],
@@ -169,10 +165,12 @@ Respond only with JSON:
       if (judgeBlock?.text) {
         try {
           judgeDecision = JSON.parse(judgeBlock.text);
-        } catch {
-          return resp.text("Judge response could not be parsed.");
+        } catch (error) {
+          console.log("Judge response that failed to parse:", judgeBlock.text);
+          return resp.text(`Judge response could not be parsed. Raw response: ${judgeBlock.text}`);
         }
       } else {
+        console.log("Full judge response:", JSON.stringify(judgeResponse.content, null, 2));
         return resp.text("No judge response found.");
       }
       if (!judgeDecision) return resp.text("No judge decision.");
