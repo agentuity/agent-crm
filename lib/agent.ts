@@ -37,6 +37,9 @@ export const createAgent = (
     const REQUIRED_TOOLS = [
       "ATTIO_FIND_RECORD",
       "ATTIO_UPDATE_RECORD",
+      "ATTIO_CREATE_RECORD",
+      "ATTIO_LIST_RECORDS",
+      "ATTIO_GET_OBJECT",
       "getOrgIdFromCustomer",
       "latestAttioNumber"
     ];
