@@ -4,8 +4,8 @@ import { AnthropicProvider } from "@composio/anthropic";
 import { Anthropic } from "@anthropic-ai/sdk";
 
 export const createAgent = (
-  prompt: string, 
-  extraTools: any[] = [], 
+  prompt: string,
+  extraTools: any[] = [],
   customToolExecutors: Record<string, Function> = {},
   verifyWebhook?: (
     rawBody: string,
@@ -40,16 +40,16 @@ export const createAgent = (
       "ATTIO_CREATE_RECORD",
       "ATTIO_LIST_RECORDS",
       "ATTIO_GET_OBJECT",
+      "SLACK_SENDS_A_MESSAGE_TO_A_SLACK_CHANNEL",
       "getOrgIdFromCustomer",
-      "latestAttioNumber"
+      "latestAttioNumber",
     ];
 
     const allTools = await composio.tools.get("joel", {
-      toolkits: ["ATTIO"],
-
+      toolkits: ["ATTIO", "SLACK"],
     });
-    const tools = allTools.filter(t => REQUIRED_TOOLS.includes(t.name));
 
+    const tools = allTools.filter((t) => REQUIRED_TOOLS.includes(t.name));
     //console.log("tools: ", tools);
 
     const payload = JSON.parse(rawBody); // parse it here because we read it as text for verification
@@ -57,7 +57,7 @@ export const createAgent = (
     // Note: Need to specify attribute names for the tool call: the default for email is "email" but it should be "email_addresses"
 
     // Create a set of custom tool names for quick lookup
-    const customToolNames = new Set(extraTools.map(tool => tool.name));
+    const customToolNames = new Set(extraTools.map((tool) => tool.name));
 
     const maxIterations = 10;
     let iteration = 0;
@@ -179,10 +179,15 @@ Respond ONLY with the JSON decision object, no other text:
           judgeDecision = JSON.parse(judgeBlock.text);
         } catch (error) {
           console.log("Judge response that failed to parse:", judgeBlock.text);
-          return resp.text(`Judge response could not be parsed. Raw response: ${judgeBlock.text}`);
+          return resp.text(
+            `Judge response could not be parsed. Raw response: ${judgeBlock.text}`
+          );
         }
       } else {
-        console.log("Full judge response:", JSON.stringify(judgeResponse.content, null, 2));
+        console.log(
+          "Full judge response:",
+          JSON.stringify(judgeResponse.content, null, 2)
+        );
         return resp.text("No judge response found.");
       }
       if (!judgeDecision) return resp.text("No judge decision.");
@@ -198,8 +203,12 @@ Respond ONLY with the JSON decision object, no other text:
       rejectReason = "";
 
       // Separate custom tools from composio tools
-      const customToolCalls = toolCalls.filter((call: any) => customToolNames.has(call.name));
-      const composioToolCalls = toolCalls.filter((call: any) => !customToolNames.has(call.name));
+      const customToolCalls = toolCalls.filter((call: any) =>
+        customToolNames.has(call.name)
+      );
+      const composioToolCalls = toolCalls.filter(
+        (call: any) => !customToolNames.has(call.name)
+      );
 
       let toolCallResult: any = {};
 
@@ -207,7 +216,7 @@ Respond ONLY with the JSON decision object, no other text:
       if (customToolCalls.length > 0) {
         console.log("Executing custom tools:", customToolCalls);
         const customResults: any[] = [];
-        
+
         for (const toolCall of customToolCalls) {
           const executor = customToolExecutors[toolCall.name];
           if (executor) {
@@ -216,24 +225,26 @@ Respond ONLY with the JSON decision object, no other text:
               customResults.push({
                 tool_call_id: toolCall.id,
                 type: "tool_result",
-                content: JSON.stringify(result)
+                content: JSON.stringify(result),
               });
             } catch (error) {
               customResults.push({
                 tool_call_id: toolCall.id,
-                type: "tool_result", 
-                content: `Error: ${error instanceof Error ? error.message : 'Unknown error'}`
+                type: "tool_result",
+                content: `Error: ${
+                  error instanceof Error ? error.message : "Unknown error"
+                }`,
               });
             }
           } else {
             customResults.push({
               tool_call_id: toolCall.id,
               type: "tool_result",
-              content: `Error: No executor found for tool ${toolCall.name}`
+              content: `Error: No executor found for tool ${toolCall.name}`,
             });
           }
         }
-        
+
         if (composioToolCalls.length === 0) {
           // Only custom tools, return custom results
           toolCallResult = customResults;
@@ -246,16 +257,21 @@ Respond ONLY with the JSON decision object, no other text:
       // Execute composio tools if any
       if (composioToolCalls.length > 0) {
         console.log("Executing composio tools:", composioToolCalls);
-        
+
         // Create a response-like object with only composio tool calls
         const composioResponse = {
           ...response,
-          content: response.content.map((block: any) => {
-            if (block.type === "tool_use" && composioToolCalls.some((call: any) => call.id === block.id)) {
-              return block;
-            }
-            return block.type === "tool_use" ? null : block;
-          }).filter(Boolean)
+          content: response.content
+            .map((block: any) => {
+              if (
+                block.type === "tool_use" &&
+                composioToolCalls.some((call: any) => call.id === block.id)
+              ) {
+                return block;
+              }
+              return block.type === "tool_use" ? null : block;
+            })
+            .filter(Boolean),
         };
 
         const composioResult = await composio.provider.handleToolCalls(
@@ -270,7 +286,7 @@ Respond ONLY with the JSON decision object, no other text:
           // Both custom and composio tools, merge results
           toolCallResult = {
             ...composioResult,
-            customResults: toolCallResult.customResults
+            customResults: toolCallResult.customResults,
           };
         }
       }

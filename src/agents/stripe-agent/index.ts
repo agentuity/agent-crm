@@ -91,7 +91,6 @@ Hard rules
 
 export default createAgent(prompt, toolMetadataList, toolExecutors);
 
-
 // const prompt = `
 // You are an automated backend agent that handles **Stripe 'charge.succeeded' webhooks**.  
 // Your job: when a charge succeeds, add that amount (in **cents**) to the company’s *credits_bought* field in Attio.
