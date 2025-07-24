@@ -12,7 +12,7 @@ export const createAgent = (
     req: AgentRequest,
     resp: AgentResponse,
     ctx: AgentContext
-  ) => Promise<boolean> 
+  ) => Promise<boolean>
 ) => {
   return async function Agent(
     req: AgentRequest,
@@ -26,7 +26,7 @@ export const createAgent = (
         error: "Webhook verification failed.",
       });
     }
-    
+
     const client = new Anthropic();
 
     const composio = new Composio({
@@ -49,7 +49,6 @@ export const createAgent = (
 
     });
     const tools = allTools.filter(t => REQUIRED_TOOLS.includes(t.name));
-
     //console.log("tools: ", tools);
 
     const payload = JSON.parse(rawBody); // parse it here because we read it as text for verification
@@ -126,6 +125,18 @@ ${
       // Claude returns a list of content blocks in `response.content`
       toolCalls = response.content.filter((block) => block.type === "tool_use");
 
+      // Log text responses to see LLM's reasoning
+      const textBlocks = response.content.filter(
+        (block) => block.type === "text"
+      );
+      if (textBlocks.length > 0) {
+        console.log(`--- Iteration ${iteration} Text Response ---`);
+        textBlocks.forEach((block, index) => {
+          console.log(block.text);
+        });
+        console.log("--- End Text Response ---");
+      }
+
       if (toolCalls.length) {
         console.log("Tool calls", toolCalls);
       } else {
@@ -154,6 +165,7 @@ OR
 { "decision": "reject", "reason": "explanation" }
 
 **Approval rules**
+- **IMPORTANT**: IGNORE THE STRUCTURE OF NESTED OBJECTS.
 - Make sure that the tool calls are in the correct format.
 - Make sure that the proposed tool calls are within the allowed tools.
 - Make sure that the proposed tool calls use the correct arguments for the tool.
@@ -187,6 +199,9 @@ Respond ONLY with the JSON decision object, no other text:
       }
       if (!judgeDecision) return resp.text("No judge decision.");
       if (judgeDecision.decision === "reject") {
+        console.log(
+          `Judge rejected the tool calls. Reason: ${judgeDecision.reason}`
+        );
         justRejected = true;
         rejectReason = judgeDecision.reason;
         iteration++;
@@ -274,6 +289,11 @@ Respond ONLY with the JSON decision object, no other text:
           };
         }
       }
+
+      // Log tool call results to see what the tools return
+      console.log(`--- Iteration ${iteration} Tool Call Results ---`);
+      console.log(JSON.stringify(toolCallResult, null, 2));
+      console.log("--- End Tool Call Results ---");
 
       previousToolCallResults.push(toolCallResult);
       allToolCalls.push(...toolCalls);
