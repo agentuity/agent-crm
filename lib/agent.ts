@@ -193,6 +193,7 @@ Respond ONLY with the JSON decision object, no other text:
       if (!judgeDecision) return resp.text("No judge decision.");
       if (judgeDecision.decision === "reject") {
         justRejected = true;
+        console.log("Rejected tool calls:", toolCalls, judgeDecision);
         rejectReason = judgeDecision.reason;
         iteration++;
         continue;
