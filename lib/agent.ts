@@ -12,7 +12,7 @@ export const createAgent = (
     req: AgentRequest,
     resp: AgentResponse,
     ctx: AgentContext
-  ) => Promise<boolean> 
+  ) => Promise<boolean>
 ) => {
   return async function Agent(
     req: AgentRequest,
@@ -26,7 +26,7 @@ export const createAgent = (
         error: "Webhook verification failed.",
       });
     }
-    
+
     const client = new Anthropic();
 
     const composio = new Composio({
@@ -46,7 +46,7 @@ export const createAgent = (
     ];
 
     const allTools = await composio.tools.get("joel", {
-      toolkits: ["ATTIO", "SLACK"],
+      tools: ["ATTIO", "SLACK"],
     });
 
     const tools = allTools.filter((t) => REQUIRED_TOOLS.includes(t.name));
@@ -69,7 +69,7 @@ export const createAgent = (
 
     while (iteration < maxIterations) {
       const response = await client.messages.create({
-        model: "claude-3-5-haiku-20241022", 
+        model: "claude-3-5-haiku-20241022",
         tools: [...tools, ...extraTools],
         max_tokens: 1000,
         stream: false,
@@ -126,9 +126,7 @@ ${
       // Claude returns a list of content blocks in `response.content`
       toolCalls = response.content.filter((block) => block.type === "tool_use");
 
-      if (toolCalls.length) {
-        console.log("Tool calls", toolCalls);
-      } else {
+      if (toolCalls.length === 0) {
         console.log("No tool calls, done.");
         const textBlock = response.content.find(
           (block) => block.type === "text"
@@ -194,6 +192,7 @@ Respond ONLY with the JSON decision object, no other text:
       if (judgeDecision.decision === "reject") {
         justRejected = true;
         rejectReason = judgeDecision.reason;
+        console.log("Rejected tool calls:", toolCalls);
         iteration++;
         continue;
       }
