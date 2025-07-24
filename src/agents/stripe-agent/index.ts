@@ -1,63 +1,91 @@
 import type { AgentRequest, AgentResponse, AgentContext } from "@agentuity/sdk";
 import { createAgent } from "../../../lib/agent";
-import { toolExecutors, toolMetadataList } from "./tools";
+import { toolMetadataList, toolExecutors } from "./tools";
 import Stripe from "stripe";
 const stripe = new Stripe(process.env.STRIPE_API_KEY ?? "", {
   apiVersion: "2025-06-30.basil",
 });
 
 const prompt = `
-You are an automated backend agent that handles **Stripe \`charge.succeeded\`**
-webhooks.  When a charge is confirmed, you must log the purchase in Attio so
-the company’s credit balance is kept up-to-date.
+You are an automated backend agent that handles **Stripe 'charge.succeeded' webhooks**.  
+Your job: when a charge succeeds, add that amount (in **cents**) to the company’s *credits_bought* field in Attio.
 
-DATA YOU NEED:
-After the signature passes, extract these fields from the verified payload:
-    stripeCustomerId = data.object.customer            (string)
-    amount           = data.object.amount              (integer, cents)
-    timestamp        = data.object.created             (unix seconds)
+────────────────────────────────────────
+ALLOWED TOOLS – USE **ONLY** THESE FOUR
+────────────────────────────────────────
+• getOrgIdFromCustomer  
+• ATTIO_FIND_RECORD  
+• ATTIO_UPDATE_RECORD  
+• latestAttioNumber (our local helper)
 
-MAPPING THE CUSTOMER to ORG:
-1. Call **getOrgIdFromCustomer(stripeCustomerId)**
-   – Looks up the Stripe Customer using our secret API key.
-   – Returns \`orgId\` from \`customer.metadata.orgId\`.  
-   – Throw if metadata.orgId is missing.
+☞ Every other Composio tool is OUT OF SCOPE and must NOT be called.  
+The Judge will reject the run if you call anything else.
 
-WRITING THE PURCHASE IN ATTIO:
-2. Call **recordStripeCharge(orgId, amount, timestamp)**
-   – Adds \`amount\` to the company’s \`creditsBought\`
-   – Sets \`lastCreditPurchase\` to the ISO date derived from \`timestamp\`
+───────────────────
+Exact step-by-step plan
+───────────────────
+1. Parse the webhook JSON  
+   • stripeCustomerId = data.object.customer (string)  
+   • amount           = data.object.amount    (integer — already in cents)  
 
-WORKFLOW (strict order):
-  1. getOrgIdFromCustomer(stripeCustomerId)
-  2. recordStripeCharge(orgId, amount, timestamp)
-  3. Return [] ← signals “all done”
+2. **getOrgIdFromCustomer**  
+   • arguments = { customerId: <stripeCustomerId> }  
+   → orgId = <tool result string>
 
-CONSTRAINTS:
-• Use **only** the tools listed in the metadata.
-• Do not call any tool more than once per webhook.
-• Produce no extra commentary; the judge module will reject deviations.
+3. **ATTIO_FIND_RECORD**  
+   • object_id  = "companies"  
+   • attributes = { org_id: <orgId> }  
+   • limit      = 1  
+   → Save record_id and credits_bought
+
+4. Determine **currentCredits** and **purchaseDate**  
+   • If \`credits_bought\` is **empty or missing**:  
+     - currentCredits = 0  
+     - purchaseDate   = new Date().toISOString().slice(0,10)   // "YYYY-MM-DD"  
+   • Otherwise:  
+     - currentCredits = latestAttioNumber(credits_bought)  
+     - purchaseDate   = new Date().toISOString().slice(0,10)
+
+5. newCredits = currentCredits + amount
+
+6. **ATTIO_UPDATE_RECORD**  
+   • object_id   = "companies"  
+   • record_id   = <record_id>  
+   • body.values = {  
+       credits_bought         : newCredits,  
+       last_credit_purchase : purchaseDate  
+     }
+
+7. Reply with **exactly**: {"status":"ok"}
+
+──────────
+Hard rules
+──────────
+• Only the four tools above may be called.  
+• Never call the same tool twice.  
+• No extra commentary; only tool calls or the final JSON.
+• If credits_bought is empty, default to 0 and still perform ATTIO_UPDATE_RECORD with today’s date.
 `;
 
-const verifyWebhook = async (
-  rawBody: string,
-  req: AgentRequest,
-  resp: AgentResponse,
-  ctx: AgentContext
-) => {
-  const headers = req.get("headers") as Record<string, string>;
-  const sigHeader = headers["stripe-signature"] ?? "";
-  try {
-    stripe.webhooks.constructEvent(
-      rawBody,
-      sigHeader,
-      process.env.STRIPE_SIGNING_SECRET ?? ""
-    );
-    return true;
-  } catch (error) {
-    console.error("❌  Stripe verification failed:", error);
-    return false;
-  }
-};
+//const verifyWebhook = async (
+//   rawBody: string,
+//   req: AgentRequest,
+//   resp: AgentResponse,
+//   ctx: AgentContext
+// ) => {
+//   const headers = req.get("headers") as Record<string, string>;
+//   const sigHeader = headers["stripe-signature"] ?? "";
+//   try {
+//     stripe.webhooks.constructEvent(
+//       rawBody,
+//       sigHeader,
+//       process.env.STRIPE_SIGNING_SECRET ?? ""
+//     );
+//     return true;
+//   } catch (error) {
+//     console.error("❌  Stripe verification failed:", error);
+//     return false;
+//   }
+// };
 
-export default createAgent(prompt);
+export default createAgent(prompt, toolMetadataList, toolExecutors);
