@@ -34,9 +34,17 @@ export const createAgent = (
       provider: new AnthropicProvider(),
     });
 
-    const tools = await composio.tools.get("joel", {
-      toolkits: ["ATTIO", "STRIPE"],
+    const REQUIRED_TOOLS = [
+      "ATTIO_FIND_RECORD",
+      "ATTIO_UPDATE_RECORD",
+      "getOrgIdFromCustomer",
+      "latestAttioNumber"
+    ];
+
+    const allTools = await composio.tools.get("joel", {
+      toolkits: ["ATTIO"],
     });
+    const tools = allTools.filter(t => REQUIRED_TOOLS.includes(t.name));
 
     //console.log("tools: ", tools);
 
