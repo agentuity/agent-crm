@@ -28,13 +28,13 @@ You MUST fill out all parameters for each tool call.
 
 If the event_type is LEAD_CATEGORY_UPDATED, you should:
   1. call the ATTIO_FIND_RECORD tool with input: 
-  {
-    "object_id": "people",
-    "limit": 1,
-    "attributes": {
-      "email_addresses": "<lead_data.email>"
+    {
+      "object_id": "people",
+      "limit": 1,
+      "attributes": {
+        "email_addresses": "<lead_data.email>"
+      }
     }
-  }
     1a. If the lead is not found, call the ATTIO_CREATE_RECORD tool with input:
         {
           "object_type": "people",
@@ -48,76 +48,78 @@ If the event_type is LEAD_CATEGORY_UPDATED, you should:
         }
     After Step 1 (or 1a) you should have access to the person record id.
   2. call the ATTIO_FIND_RECORD tool with input: 
-  {
-    "object_id": "companies",
-    "limit": 1,
-    "attributes": {
-      "name": "<lead_data.company_name>"
+    {
+      "object_id": "companies",
+      "limit": 1,
+      "attributes": {
+        "name": "<lead_data.company_name>"
+      }
     }
-  }
   2a. If there is no company with that name, you must create one. Call the ATTIO_CREATE_RECORD tool with input:
-  {
-    "object_type": "companies",
-    "values": {
-      "name": "<lead_data.company_name>"
-    }
-  }
+      {
+        "object_type": "companies",
+        "values": {
+          "name": "<lead_data.company_name>"
+        }
+      }
   After Step 2 (or 2a), you should have access to the company record id.
 
   3. call the ATTIO_LIST_RECORDS tool with input:
-  {
-    "object_type": "deals",
-    "limit": 100,
-  }
-    You may or may not find a deal with the current lead's company. If
-  3a. If there is no deal with the current lead's company, call the ATTIO_CREATE_RECORD tool with input:
     {
       "object_type": "deals",
-      "values": {
-        "name": "Deal with <lead_data.company_name>",
-        "stage": "Lead",
-        "owner": "nmirigliani@agentuity.com",
-        "value": 0,
-        "associated_people": [personRecordId],
-        "associated_company": companyRecordId,
-      }
+      "limit": 100,
     }
+  You may or may not find a deal with the current lead's company.
+    3a. If there is no deal with the current lead's company, call the ATTIO_CREATE_RECORD tool with input:
+        {
+          "object_type": "deals",
+          "values": {
+            "name": "Deal with <lead_data.company_name>",
+            "stage": "Lead",
+            "owner": "nmirigliani@agentuity.com",
+            "value": 0,
+            "associated_people": [personRecordId],
+            "associated_company": companyRecordId,
+          }
+        }
     You should recieve the record that you created.
-  3b. If there **is** a deal with the current lead's company, call the ATTIO_UPDATE_RECORD tool with input:
-    {
-      "object_type": "deals",
-      "record_id": "<dealRecordId> (from Step 3)",
-      "values": {
-        "associated_people": [...existingAssociatedPeople (from Step 3), personRecordId],
-      }
-    The goal is to add the person to the existing deal.
+    3b. If there **is** a deal with the current lead's company, call the ATTIO_UPDATE_RECORD tool with input:
+        {
+          "object_type": "deals",
+          "record_id": "<dealRecordId> (from Step 3)",
+          "values": {
+            "associated_people": [...existingAssociatedPeople (from Step 3), personRecordId],
+          }
+        }
+      The goal is to add the person to the existing deal.
 
   4. Finally, call the SMARTLEAD_SET_LEAD_STATUS_POSITIVE with input:
-  {
-    "email": "<lead_data.email>"
-  }
+      {
+        "email": "<lead_data.email>"
+      }
+  Once you have done this, you should not make any more tool calls and stop completely.
 
 If the event_type is EMAIL_REPLY, you should:
   1. call the SMARTLEAD_GET_LEAD_STATUS tool with input:
-  {
-    "email": "<to_email>"
-  }
-  1a. If the lead status is "positive", call the SLACK_SENDS_A_MESSAGE_TO_A_SLACK_CHANNEL tool.
-  The message should be *exactly*:
+    {
+      "email": "<to_email>"
+    }
+    1a. If the lead status is "positive", call the SLACK_SENDS_A_MESSAGE_TO_A_SLACK_CHANNEL tool.
+      The message should be *exactly*:
 
-  "<@ID>, you have an email to look at in your inbox (<from_email>) from <to_name> (<to_email>)."
+      "<@ID>, you have an email to look at in your inbox (<from_email>) from <to_name> (<to_email>)."
 
-  where ID is the user id of the person who should receive the message. You must determine this to be either Matthew Congrove, Jeff Haynie, or Rick Blalock based on the from_email.
-  The ids are:
-  - Matthew Congrove: U08A0FWLM24
-  - Jeff Haynie: U08993W8V0T
-  - Rick Blalock: U088UL77GDV
-  You must keep the ids in the format <@ID> including the "<@" and ">".
-  {
-    "channel": "C091N1Z5Q3Y",
-    "text": "<message you created based on the rules above>"
-  }
-  1b. If the lead status is not "positive" (including empty reply or nothing), do nothing.
+      where ID is the user id of the person who should receive the message. You must determine this to be either Matthew Congrove, Jeff Haynie, or Rick Blalock based on the from_email.
+      The ids are:
+      - Matthew Congrove: U08A0FWLM24
+      - Jeff Haynie: U08993W8V0T
+      - Rick Blalock: U088UL77GDV
+      You must keep the ids in the format <@ID> including the "<@" and ">".
+      {
+        "channel": "C091N1Z5Q3Y",
+        "text": "<message you created based on the rules above>"
+      }
+    1b. If the lead status is not "positive" (including empty reply or nothing), do nothing.
   
   After Step 1, you should have sent a message to the appropriate person. Once you have done this, you should stop.
 `;

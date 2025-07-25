@@ -3,6 +3,13 @@ import { Composio } from "@composio/core";
 import { AnthropicProvider } from "@composio/anthropic";
 import { Anthropic } from "@anthropic-ai/sdk";
 
+const client = new Anthropic();
+
+const composio = new Composio({
+  apiKey: process.env.COMPOSIO_API_KEY,
+  provider: new AnthropicProvider(),
+});
+
 export const createAgent = (
   prompt: string,
   extraTools: any[] = [],
@@ -19,45 +26,32 @@ export const createAgent = (
     resp: AgentResponse,
     ctx: AgentContext
   ) {
-    const rawBody = await req.data.text();
-    if (verifyWebhook && !verifyWebhook(rawBody, req, resp, ctx)) {
+    const payload = await req.data.json();
+    if (
+      verifyWebhook &&
+      !verifyWebhook(JSON.stringify(payload), req, resp, ctx)
+    ) {
       return resp.json({
         success: false,
         error: "Webhook verification failed.",
       });
     }
 
-    const client = new Anthropic();
+    const userId = process.env.COMPOSIO_USER_ID;
+    if (!userId) {
+      throw new Error("COMPOSIO_USER_ID is not set");
+    }
 
-    const composio = new Composio({
-      apiKey: process.env.COMPOSIO_API_KEY,
-      provider: new AnthropicProvider(),
+    const tools = await composio.tools.get(userId, {
+      tools: [
+        "ATTIO_FIND_RECORD",
+        "ATTIO_UPDATE_RECORD",
+        "ATTIO_CREATE_RECORD",
+        "ATTIO_LIST_RECORDS",
+        "ATTIO_GET_OBJECT",
+        "SLACK_SENDS_A_MESSAGE_TO_A_SLACK_CHANNEL",
+      ],
     });
-
-    const REQUIRED_TOOLS = [
-      "ATTIO_FIND_RECORD",
-      "ATTIO_UPDATE_RECORD",
-      "ATTIO_CREATE_RECORD",
-      "ATTIO_LIST_RECORDS",
-      "ATTIO_GET_OBJECT",
-      "SLACK_SENDS_A_MESSAGE_TO_A_SLACK_CHANNEL",
-      "getOrgIdFromCustomer",
-      "latestAttioNumber",
-    ];
-
-    const allTools = await composio.tools.get("joel", {
-      toolkits: ["ATTIO", "SLACK"],
-    });
-
-    const tools = allTools.filter((t) => REQUIRED_TOOLS.includes(t.name));
-    //console.log("tools: ", tools);
-
-    const payload = JSON.parse(rawBody); // parse it here because we read it as text for verification
-
-    // Note: Need to specify attribute names for the tool call: the default for email is "email" but it should be "email_addresses"
-
-    // Create a set of custom tool names for quick lookup
-    const customToolNames = new Set(extraTools.map((tool) => tool.name));
 
     const maxIterations = 10;
     let iteration = 0;
@@ -105,7 +99,7 @@ ${
         toolCalls,
         null,
         2
-      )}`
+      )}\nReason: ${rejectReason}`
     : ""
 }
 
@@ -126,10 +120,9 @@ ${
       // Claude returns a list of content blocks in `response.content`
       toolCalls = response.content.filter((block) => block.type === "tool_use");
 
-      if (toolCalls.length) {
-        // console.log("Tool calls", toolCalls);
-      } else {
-        console.log("No tool calls, done.");
+      // If there are no tool calls, we're done.
+      if (!toolCalls.length) {
+        ctx.logger.info("No tool calls detected, finishing up.");
         const textBlock = response.content.find(
           (block) => block.type === "text"
         );
@@ -139,7 +132,6 @@ ${
       //JUDGE THE TOOL CALLS HERE
       const judgeResponse = await client.messages.create({
         model: "claude-3-5-haiku-20241022", // Using cheaper Haiku for judge too
-        // Removed tools - judge should only return text, not make tool calls
         max_tokens: 1000,
         stream: false,
         messages: [
@@ -178,32 +170,38 @@ Respond ONLY with the JSON decision object, no other text:
         try {
           judgeDecision = JSON.parse(judgeBlock.text);
         } catch (error) {
-          console.log("Judge response that failed to parse:", judgeBlock.text);
+          ctx.logger.error(
+            "Judge response that failed to parse:",
+            judgeBlock.text
+          );
           return resp.text(
             `Judge response could not be parsed. Raw response: ${judgeBlock.text}`
           );
         }
       } else {
-        console.log(
+        ctx.logger.info(
           "Full judge response:",
           JSON.stringify(judgeResponse.content, null, 2)
         );
         return resp.text("No judge response found.");
       }
+
       if (!judgeDecision) return resp.text("No judge decision.");
+
       if (judgeDecision.decision === "reject") {
         justRejected = true;
-        console.log("Rejected tool calls:", toolCalls, judgeDecision);
+        ctx.logger.info("Rejected tool calls:", toolCalls, judgeDecision);
         rejectReason = judgeDecision.reason;
         iteration++;
         continue;
       }
 
-      // If we get here, the Judge approved the tool calls.
+      // Judge approved the tool calls
       justRejected = false;
       rejectReason = "";
 
-      // Separate custom tools from composio tools
+      const customToolNames = new Set(extraTools.map((tool) => tool.name));
+
       const customToolCalls = toolCalls.filter((call: any) =>
         customToolNames.has(call.name)
       );
@@ -215,14 +213,14 @@ Respond ONLY with the JSON decision object, no other text:
 
       // Execute custom tools
       if (customToolCalls.length > 0) {
-        console.log("Executing custom tools:", customToolCalls);
+        ctx.logger.info("Executing custom tools:", customToolCalls);
         const customResults: any[] = [];
 
         for (const toolCall of customToolCalls) {
           const executor = customToolExecutors[toolCall.name];
           if (executor) {
             try {
-              const result = await executor(toolCall.input);
+              const result = await executor(toolCall.input); // This is where the tool call is executed based on its executor.
               customResults.push({
                 tool_call_id: toolCall.id,
                 type: "tool_result",
@@ -246,18 +244,17 @@ Respond ONLY with the JSON decision object, no other text:
           }
         }
 
+        // If there are no composio tools, return the custom results - otherwise, merge them later
         if (composioToolCalls.length === 0) {
-          // Only custom tools, return custom results
           toolCallResult = customResults;
         } else {
-          // Both custom and composio tools, we'll merge results
           toolCallResult.customResults = customResults;
         }
       }
 
       // Execute composio tools if any
       if (composioToolCalls.length > 0) {
-        console.log("Executing composio tools:", composioToolCalls);
+        ctx.logger.info("Executing composio tools:", composioToolCalls);
 
         // Create a response-like object with only composio tool calls
         const composioResponse = {
@@ -276,7 +273,7 @@ Respond ONLY with the JSON decision object, no other text:
         };
 
         const composioResult = await composio.provider.handleToolCalls(
-          "joel",
+          userId,
           composioResponse
         );
 
