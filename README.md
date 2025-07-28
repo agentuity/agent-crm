@@ -21,15 +21,21 @@ All agents use the shared createAgent template in src/lib/agent.ts, Composio too
 
 ## Installation
 1. Clone the repo:  
-    git clone https://github.com/your-org/attio-crm-agents.git  
-    cd attio-crm-agents  
-2. Install dependencies:  
-    npm install  
+    ```
+   git clone https://github.com/your-org/attio-crm-agents.git
+   cd attio-crm-agents
+    ```  
+3. Install dependencies:  
+    ```
+   npm install
+    ```  
 
 ## Configuration
 1. Copy the example env file:  
-    ` cp .env.example .env ` 
-2. Open .env and set:
+    ```
+   cp .env.example .env
+    ``` 
+3. Open .env and set:
    ``` 
     COMPOSIO_API_KEY=your_composio_api_key  
     STRIPE_API_KEY=sk_live_…  
