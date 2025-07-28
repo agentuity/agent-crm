@@ -39,9 +39,7 @@ export const createAgent = (
     }
 
     const userId = "default"
-    if (!userId) {
-      throw new Error("COMPOSIO_USER_ID is not set");
-    }
+    
 
     const tools = await composio.tools.get(userId, {
       tools: [
