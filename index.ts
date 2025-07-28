@@ -24,13 +24,6 @@ if (!process.env.AGENTUITY_API_KEY && !process.env.AGENTUITY_SDK_KEY) {
   process.exit(1);
 }
 
-if (!process.env.AGENTUITY_PROJECT_KEY) {
-  console.error(
-    "\x1b[31m[ERROR] AGENTUITY_PROJECT_KEY is not set. Please set this environment variable.\x1b[0m"
-  );
-  process.exit(1);
-}
-
 if (!process.env.AGENTUITY_TRANSPORT_URL) {
   console.warn(
     "\x1b[31m[WARN] You are running this agent outside of the Agentuity environment. Any automatic Agentuity features will be disabled.\x1b[0m"
