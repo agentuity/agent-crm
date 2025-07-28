@@ -47,13 +47,6 @@ if (!process.env.AGENTUITY_TRANSPORT_URL) {
   }
 }
 
-if (!process.env.ATTIO_AUTH_TOKEN) {
-  console.error(
-    "\x1b[31m[ERROR] ATTIO_AUTH_TOKEN is not set. Please set this environment variable.\x1b[0m"
-  );
-  process.exit(1);
-}
-
 if (!process.env.SMARTLEAD_API_KEY) {
   console.error(
     "\x1b[31m[ERROR] SMARTLEAD_API_KEY is not set. Please set this environment variable.\x1b[0m"
