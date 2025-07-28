@@ -65,11 +65,15 @@ If the event_type is LEAD_CATEGORY_UPDATED, you should:
       }
   After Step 2 (or 2a), you should have access to the company record id.
 
-  3. call the ATTIO_LIST_RECORDS tool with input:
-    {
-      "object_type": "deals",
-      "limit": 100,
-    }
+  3. call the ATTIO_FIND_RECORD tool with input:
+  {
+      "object_id": "deals",
+      "limit": 1,
+      "attributes": {
+        "associated_company": { target_record_id: "<companyRecordId>" }
+      }
+  }
+  
   You may or may not find a deal with the current lead's company.
     3a. If there is no deal with the current lead's company, call the ATTIO_CREATE_RECORD tool with input:
         {
@@ -79,7 +83,7 @@ If the event_type is LEAD_CATEGORY_UPDATED, you should:
             "stage": "Lead",
             "owner": "nmirigliani@agentuity.com",
             "value": 0,
-            "associated_people": [personRecordId],
+            "associated_people": ["<personRecordId_1>", "<personRecordId_2>", ...],
             "associated_company": companyRecordId,
           }
         }
@@ -101,9 +105,12 @@ If the event_type is LEAD_CATEGORY_UPDATED, you should:
   Once you have done this, you should not make any more tool calls and stop completely.
 
   5. Finally, call the SLACKBOT_SENDS_A_MESSAGE_TO_A_SLACK_CHANNEL tool.
-  The message should be *exactly*:
+  The message should be markdown, and *exactly*:
 
-  "<@ID>, you have a new lead from <lead_data.first_name> <lead_data.last_name> (<lead_data.email>) at <lead_data.company_name>. Check your inbox (<from_email>)."
+  "
+  👀 *New Lead*
+  <@ID>, you have a new lead from <lead_data.first_name> <lead_data.last_name> (<lead_data.email>) at <lead_data.company_name>. Check your inbox (<from_email>).
+  "
 
   where ID is the user id of the person who should receive the message. You must determine this to be either Jeff Haynie, or Rick Blalock based on the from_email.
   The ids are:
@@ -121,9 +128,12 @@ If the event_type is EMAIL_REPLY, you should:
       "email": "<to_email>"
     }
     1a. If the lead status is "positive", call the SLACKBOT_SENDS_A_MESSAGE_TO_A_SLACK_CHANNEL tool.
-      The message should be *exactly*:
+      The message should be markdown, and *exactly*:
 
-      "<@ID>, you have an email to look at in your inbox (<from_email>) from <to_name> (<to_email>)."
+      "
+      📬 *New Reply*
+      <@ID>, you have an email to look at in your inbox (<from_email>) from <to_name> (<to_email>).
+      "
 
       where ID is the user id of the person who should receive the message. You must determine this to be either Matthew Congrove, Jeff Haynie, or Rick Blalock based on the from_email.
       The ids are:
@@ -143,3 +153,9 @@ If the event_type is EMAIL_REPLY, you should:
 export default createAgent(prompt, toolMetadataList, toolExecutors);
 
 // {"email_addresses": ["nmirigliani@agentuity.com"]}
+
+// 3. call the ATTIO_LIST_RECORDS tool with input:
+//     {
+//       "object_type": "deals",
+//       "limit": 100,
+//     }
