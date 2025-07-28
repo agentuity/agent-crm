@@ -54,13 +54,6 @@ if (!process.env.ATTIO_AUTH_TOKEN) {
   process.exit(1);
 }
 
-if (!process.env.SLACK_WEBHOOK) {
-  console.error(
-    "\x1b[31m[ERROR] SLACK_WEBHOOK is not set. Please set this environment variable.\x1b[0m"
-  );
-  process.exit(1);
-}
-
 if (!process.env.SMARTLEAD_API_KEY) {
   console.error(
     "\x1b[31m[ERROR] SMARTLEAD_API_KEY is not set. Please set this environment variable.\x1b[0m"
