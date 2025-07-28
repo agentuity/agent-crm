@@ -161,61 +161,28 @@ Your job is to manage people and companies in Attio based on Clerk user and orga
 
 **Step 4: Update company with org**
 - Get current \`org_id\` from company: \`company.values.org_id[0].value\` (string)
-- If org_id empty/null: set \`newOrgId = "data.name:data.id"\` and \`name = "data.name"\`
-- If org_id exists: 
-  - Parse existing: \`existingOrgs = orgId.split('|')\`
-  - Check if \`data.id\` already exists: \`existingOrgs.some(org => org.includes(data.id))\`
-  - If not duplicate: \`newOrgId = existingOrgId + "|data.name:data.id"\`
-  - Keep existing company name unchanged: \`name = company.values.name[0].value\`
-- call the ATTIO_UPDATE_RECORD tool with input:
-  {
-    "object_type": "companies",
-    "record_id": "company_record_id_from_step_3",
-    "values": {
-      "org_id": "newOrgId",
-      "name": "name"
+- If org_id empty/null: 
+  - Set \`newOrgId = "data.id"\` and \`name = "data.name"\`
+  - call the ATTIO_UPDATE_RECORD tool with input:
+    {
+      "object_type": "companies",
+      "record_id": "company_record_id_from_step_3",
+      "values": {
+        "org_id": "newOrgId",
+        "name": "name"
+      }
     }
-  }
-- **CRITICAL: Always append, never replace existing orgs**
+- If org_id already exists: 
+  - **SKIP UPDATE** - keep the first org that was created for this company
+  - Log that org already exists for this company
 
 **CRITICAL RULES:**
 - Do NOT repeat failed searches
 - Do NOT create new companies  
 - If you can't find creator or company, ABORT with error message
-- **NEVER overwrite existing org_id data - ALWAYS append with "|" delimiter**
-- **PRESERVE existing company name when adding additional orgs**
+- **ONLY set org_id if it's currently empty - keep the first org created for each company**
+- **SKIP updating companies that already have an org_id**
 
-### organization.updated  
-**CRITICAL: This updates an existing organization's name. Find the company and update both the company name AND the org_id field.**
-
-**LINEAR WORKFLOW:**
-
-**Step 1: Find companies with matching org_id**
-- call the ATTIO_FIND_RECORD tool with input:
-  {
-    "object_id": "companies",
-    "limit": 1,
-    "attributes": {
-      "org_id": "data.id"
-    }
-  }
-
-**Step 2: Update company record**
-- call the ATTIO_UPDATE_RECORD tool with input:
-  {
-    "object_type": "companies",
-    "record_id": "company_record_id_from_step_1",
-    "values": {
-      "name": "data.name",
-      "org_id": "updated_org_id_string_from_step_2"
-    }
-  }
-
-**Example:**
-- Webhook: \\\`{"data": {"id": "org_zentrix_001", "name": "Zentrix Global Security"}}\\\`
-- Current org_id: \\\`"Zentrix Security:org_zentrix_001|Other Org:other_id"\\\`
-- Updated org_id: \\\`"Zentrix Global Security:org_zentrix_001|Other Org:other_id"\\\`
-- Company name: \\\`"Zentrix Global Security"\\\`
 
 ## Efficiency & Error Handling:
 - Never repeat identical tool calls
@@ -230,9 +197,9 @@ Your job is to manage people and companies in Attio based on Clerk user and orga
 - Org ID: \`data.id\`
 - Org Name: \`data.name\`
 - Email domain: \`email.split('@')[1]\`
-- Parse org string: \`orgString.split('|').map(part => { const [name, id] = part.split(':'); return {name, id}; })\`
+- Org ID comparison: Simple string equality check \`orgId === data.id\`
 
-**Remember: For organization.created, the person and company ALREADY EXIST. Find them and update the company's org_id field. Do NOT create anything new.**
+**Remember: For organization.created, the person and company ALREADY EXIST. Find them and update the company's org_id field ONLY if it's empty. Do NOT create anything new. Keep the first org created for each company.**
 `;
 
-export default createAgent(clerkWebhookPrompt, [], {}, "claude-3-5-haiku-20241022");
+export default createAgent(clerkWebhookPrompt);
