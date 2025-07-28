@@ -14,7 +14,7 @@ export const createAgent = (
   prompt: string,
   extraTools: any[] = [],
   customToolExecutors: Record<string, Function> = {},
-  plannerModel: string = "claude-3-7-sonnet-latest",
+  plannerModel: string = "claude-3-7-sonnet-20250219",
   verifyWebhook?: (
     rawBody: string,
     req: AgentRequest,
@@ -38,8 +38,7 @@ export const createAgent = (
       });
     }
 
-    const userId = "default"
-    
+    const userId = "default";
 
     const tools = await composio.tools.get(userId, {
       tools: [
@@ -130,7 +129,7 @@ ${
 
       //JUDGE THE TOOL CALLS HERE
       const judgeResponse = await client.messages.create({
-        model: "claude-3-5-haiku-latest", // Using cheaper Haiku for judge too
+        model: "claude-3-haiku-20241022", // Using cheaper Haiku for judge too
         max_tokens: 1000,
         stream: false,
         messages: [
