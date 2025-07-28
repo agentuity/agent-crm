@@ -118,7 +118,7 @@ If the event_type is LEAD_CATEGORY_UPDATED, you should:
   - Rick Blalock: U088UL77GDV
   You must keep the ids in the format <@ID> including the "<@" and ">".
   {
-    "channel": "C091N1Z5Q3Y",
+    "channel": "#yay",  
     "text": "<message you created based on the rules above>"
   }
 
@@ -142,7 +142,7 @@ If the event_type is EMAIL_REPLY, you should:
       - Rick Blalock: U088UL77GDV
       You must keep the ids in the format <@ID> including the "<@" and ">".
       {
-        "channel": "C091N1Z5Q3Y",
+        "channel": "#yay",
         "text": "<message you created based on the rules above>"
       }
     1b. If the lead status is not "positive" (including empty reply or nothing), do nothing.
