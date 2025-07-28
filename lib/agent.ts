@@ -63,7 +63,7 @@ export const createAgent = (
 
     while (iteration < maxIterations) {
       const response = await client.messages.create({
-        model: "claude-3-5-haiku-20241022",
+        model: "claude-3-7-sonnet-latest",
         tools: [...tools, ...extraTools],
         max_tokens: 1000,
         stream: false,
