@@ -104,58 +104,65 @@ If the event_type is LEAD_CATEGORY_UPDATED, you should:
       }
   Once you have done this, you should not make any more tool calls and stop completely.
 
-  5. Finally, call the SLACKBOT_SENDS_A_MESSAGE_TO_A_SLACK_CHANNEL tool.
-  The message should be markdown, and *exactly*:
+  5. Finally, call the KV_STORE_POSITIVE_LEAD tool with input:
+    {
+      "email": "<lead_data.email>"
+    }
+  You should receive a success response.
 
-  "
-  👀 *New Lead*
-  <@ID>, you have a new lead from <lead_data.first_name> <lead_data.last_name> (<lead_data.email>) at <lead_data.company_name>. Check your inbox (<from_email>).
-  "
-
-  where ID is the user id of the person who should receive the message. You must determine this to be either Jeff Haynie, or Rick Blalock based on the from_email.
-  The ids are:
-  - Jeff Haynie: U08993W8V0T
-  - Rick Blalock: U088UL77GDV
-  You must keep the ids in the format <@ID> including the "<@" and ">".
-  {
-    "channel": "#yay",  
-    "text": "<message you created based on the rules above>"
-  }
 
 If the event_type is EMAIL_REPLY, you should:
-  1. call the SMARTLEAD_GET_LEAD_STATUS tool with input:
+  1. Call the KV_STORE_EMAIL tool with input:
     {
-      "email": "<to_email>"
+      "from_email": "<from_email>",
+      "to_email": "<to_email>",
+      "body": "<reply_message.html>"
     }
-    1a. If the lead status is "positive", call the SLACKBOT_SENDS_A_MESSAGE_TO_A_SLACK_CHANNEL tool.
-      The message should be markdown, and *exactly*:
-
-      "
-      📬 *New Reply*
-      <@ID>, you have an email to look at in your inbox (<from_email>) from <to_name> (<to_email>).
-      "
-
-      where ID is the user id of the person who should receive the message. You must determine this to be either Matthew Congrove, Jeff Haynie, or Rick Blalock based on the from_email.
-      The ids are:
-      - Matthew Congrove: U08A0FWLM24
-      - Jeff Haynie: U08993W8V0T
-      - Rick Blalock: U088UL77GDV
-      You must keep the ids in the format <@ID> including the "<@" and ">".
-      {
-        "channel": "#yay",
-        "text": "<message you created based on the rules above>"
-      }
-    1b. If the lead status is not "positive" (including empty reply or nothing), do nothing.
-  
-  After Step 1, you should have sent a message to the appropriate person. Once you have done this, you should stop.
+  You should receive a success response.
 `;
 
 export default createAgent(prompt, toolMetadataList, toolExecutors);
 
-// {"email_addresses": ["nmirigliani@agentuity.com"]}
+// 6. Finally, call the SLACKBOT_SENDS_A_MESSAGE_TO_A_SLACK_CHANNEL tool.
+//   The message should be markdown, and *exactly*:
 
-// 3. call the ATTIO_LIST_RECORDS tool with input:
-//     {
-//       "object_type": "deals",
-//       "limit": 100,
-//     }
+//   "
+//   👀 *New Lead*
+//   <@ID>, you have a new lead from <lead_data.first_name> <lead_data.last_name> (<lead_data.email>) at <lead_data.company_name>. Check your inbox (<from_email>).
+//   "
+
+//   where ID is the user id of the person who should receive the message. You must determine this to be either Jeff Haynie, or Rick Blalock based on the from_email.
+//   The ids are:
+//   - Jeff Haynie: U08993W8V0T
+//   - Rick Blalock: U088UL77GDV
+//   You must keep the ids in the format <@ID> including the "<@" and ">".
+//   {
+//     "channel": "#yay",
+//     "text": "<message you created based on the rules above>"
+//   }
+
+// 2. call the SMARTLEAD_GET_LEAD_STATUS tool with input:
+// {
+//   "email": "<to_email>"
+// }
+// 2a. If the lead status is "positive", call the SLACKBOT_SENDS_A_MESSAGE_TO_A_SLACK_CHANNEL tool.
+//   The message should be markdown, and *exactly*:
+
+//   "
+//   📬 *New Reply*
+//   <@ID>, you have an email to look at in your inbox (<from_email>) from <to_name> (<to_email>).
+//   "
+
+//   where ID is the user id of the person who should receive the message. You must determine this to be either Matthew Congrove, Jeff Haynie, or Rick Blalock based on the from_email.
+//   The ids are:
+//   - Matthew Congrove: U08A0FWLM24
+//   - Jeff Haynie: U08993W8V0T
+//   - Rick Blalock: U088UL77GDV
+//   You must keep the ids in the format <@ID> including the "<@" and ">".
+//   {
+//     "channel": "#yay",
+//     "text": "<message you created based on the rules above>"
+//   }
+// 2b. If the lead status is not "positive" (including empty reply or nothing), do nothing.
+
+// After Step 2, you should have sent a message to the appropriate person. Once you have done this, you should stop.

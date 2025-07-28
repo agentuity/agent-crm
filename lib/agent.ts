@@ -218,7 +218,7 @@ Respond ONLY with the JSON decision object, no other text:
           const executor = customToolExecutors[toolCall.name];
           if (executor) {
             try {
-              const result = await executor(toolCall.input); // This is where the tool call is executed based on its executor.
+              const result = await executor(toolCall.input, ctx); // This is where the tool call is executed based on its executor.
               customResults.push({
                 tool_call_id: toolCall.id,
                 type: "tool_result",
