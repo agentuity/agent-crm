@@ -63,7 +63,6 @@ All agents use the shared createAgent template in src/lib/agent.ts, Composio too
 - Purpose:  
     1. On user.created: find or create a Person in Attio, then find or create their Company.  
     2. On organization.created/updated: find existing company and update its org_id and/or name per rules.  
-- Key rules: max 6 iterations, no duplicate calls, no contains filters, linear workflows.
 
 ### SmartLead Agent
 - File: `src/agents/smartLeadAgent.ts`  
