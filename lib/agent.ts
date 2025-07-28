@@ -14,6 +14,7 @@ export const createAgent = (
   prompt: string,
   extraTools: any[] = [],
   customToolExecutors: Record<string, Function> = {},
+  plannerModel: string = "claude-3-7-sonnet-latest",
   verifyWebhook?: (
     rawBody: string,
     req: AgentRequest,
@@ -63,7 +64,7 @@ export const createAgent = (
 
     while (iteration < maxIterations) {
       const response = await client.messages.create({
-        model: "claude-3-7-sonnet-latest",
+        model: plannerModel,
         tools: [...tools, ...extraTools],
         max_tokens: 1000,
         stream: false,

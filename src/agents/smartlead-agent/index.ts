@@ -13,6 +13,7 @@ If the event_type is LEAD_CATEGORY_UPDATED, the webhook will contain the followi
 - lead_data.first_name: The first name of the potential lead.
 - lead_data.last_name: The last name of the potential lead.
 - lead_data.company_name: The name of the company the potential lead is associated with.
+- from_email: The email of the person in our organization who sent the original email
 
 If the event_type is EMAIL_REPLY, the webhook will contain the following important fields:
 - from_email: The email of the person in our organization who sent the original email
@@ -98,6 +99,21 @@ If the event_type is LEAD_CATEGORY_UPDATED, you should:
         "email": "<lead_data.email>"
       }
   Once you have done this, you should not make any more tool calls and stop completely.
+
+  5. Finally, call the SLACK_SENDS_A_MESSAGE_TO_A_SLACK_CHANNEL tool.
+  The message should be *exactly*:
+
+  "<@ID>, you have a new lead from <lead_data.first_name> <lead_data.last_name> (<lead_data.email>) at <lead_data.company_name>. Check your inbox (<from_email>)."
+
+  where ID is the user id of the person who should receive the message. You must determine this to be either Jeff Haynie, or Rick Blalock based on the from_email.
+  The ids are:
+  - Jeff Haynie: U08993W8V0T
+  - Rick Blalock: U088UL77GDV
+  You must keep the ids in the format <@ID> including the "<@" and ">".
+  {
+    "channel": "C091N1Z5Q3Y",
+    "text": "<message you created based on the rules above>"
+  }
 
 If the event_type is EMAIL_REPLY, you should:
   1. call the SMARTLEAD_GET_LEAD_STATUS tool with input:

@@ -6,6 +6,8 @@ const stripe = new Stripe(process.env.STRIPE_API_KEY ?? "", {
   apiVersion: "2025-06-30.basil",
 });
 
+const today = new Date().toISOString().slice(0,10);
+
 const prompt = `
 You are an automated backend agent that handles **Stripe 'charge.succeeded' webhooks**.  
 Your job: when a charge succeeds, add that amount (in **cents**) to the company’s *credits_bought* field in Attio.
@@ -41,10 +43,10 @@ Exact step-by-step plan
 4. Determine **currentCredits** and **purchaseDate**  
    • If \`credits_bought\` is **empty or missing**:  
      - currentCredits = 0  
-     - purchaseDate   = new Date().toISOString().slice(0,10)   // "YYYY-MM-DD"  
+     - purchaseDate   = "${today}"   
    • Otherwise:  
      - currentCredits = latestAttioNumber(credits_bought)  
-     - purchaseDate   = new Date().toISOString().slice(0,10)
+     - purchaseDate   = "${today}"
 
 5. newCredits = currentCredits + amount
 
@@ -68,28 +70,28 @@ Hard rules
 • If credits_bought is empty, default to 0 and still perform ATTIO_UPDATE_RECORD with today’s date.
 `;
 
-//const verifyWebhook = async (
-//   rawBody: string,
-//   req: AgentRequest,
-//   resp: AgentResponse,
-//   ctx: AgentContext
-// ) => {
-//   const headers = req.get("headers") as Record<string, string>;
-//   const sigHeader = headers["stripe-signature"] ?? "";
-//   try {
-//     stripe.webhooks.constructEvent(
-//       rawBody,
-//       sigHeader,
-//       process.env.STRIPE_SIGNING_SECRET ?? ""
-//     );
-//     return true;
-//   } catch (error) {
-//     console.error("❌  Stripe verification failed:", error);
-//     return false;
-//   }
-// };
+const verifyWebhook = async (
+  rawBody: string,
+  req: AgentRequest,
+  resp: AgentResponse,
+  ctx: AgentContext
+) => {
+  const headers = req.get("headers") as Record<string, string>;
+  const sigHeader = headers["stripe-signature"] ?? "";
+  try {
+    stripe.webhooks.constructEvent(
+      rawBody,
+      sigHeader,
+      process.env.STRIPE_SIGNING_SECRET ?? ""
+    );
+    return true;
+  } catch (error) {
+    console.error("❌  Stripe verification failed:", error);
+    return false;
+  }
+};
 
-export default createAgent(prompt, toolMetadataList, toolExecutors);
+export default createAgent(prompt, toolMetadataList, toolExecutors, "claude-3-7-sonnet-latest", /*verifyWebhook*/);
 
 // const prompt = `
 // You are an automated backend agent that handles **Stripe 'charge.succeeded' webhooks**.  
