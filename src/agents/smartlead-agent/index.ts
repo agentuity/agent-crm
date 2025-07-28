@@ -94,13 +94,13 @@ If the event_type is LEAD_CATEGORY_UPDATED, you should:
         }
       The goal is to add the person to the existing deal.
 
-  4. Finally, call the SMARTLEAD_SET_LEAD_STATUS_POSITIVE with input:
+  4. Call the SMARTLEAD_SET_LEAD_STATUS_POSITIVE with input:
       {
         "email": "<lead_data.email>"
       }
   Once you have done this, you should not make any more tool calls and stop completely.
 
-  5. Finally, call the SLACK_SENDS_A_MESSAGE_TO_A_SLACK_CHANNEL tool.
+  5. Finally, call the SLACKBOT_SENDS_A_MESSAGE_TO_A_SLACK_CHANNEL tool.
   The message should be *exactly*:
 
   "<@ID>, you have a new lead from <lead_data.first_name> <lead_data.last_name> (<lead_data.email>) at <lead_data.company_name>. Check your inbox (<from_email>)."
@@ -120,7 +120,7 @@ If the event_type is EMAIL_REPLY, you should:
     {
       "email": "<to_email>"
     }
-    1a. If the lead status is "positive", call the SLACK_SENDS_A_MESSAGE_TO_A_SLACK_CHANNEL tool.
+    1a. If the lead status is "positive", call the SLACKBOT_SENDS_A_MESSAGE_TO_A_SLACK_CHANNEL tool.
       The message should be *exactly*:
 
       "<@ID>, you have an email to look at in your inbox (<from_email>) from <to_name> (<to_email>)."
