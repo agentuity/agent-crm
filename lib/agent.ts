@@ -38,7 +38,7 @@ export const createAgent = (
       });
     }
 
-    const userId = process.env.COMPOSIO_USER_ID;
+    const userId = "default"
     if (!userId) {
       throw new Error("COMPOSIO_USER_ID is not set");
     }

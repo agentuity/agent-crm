@@ -89,13 +89,6 @@ if (!process.env.COMPOSIO_API_KEY) {
   process.exit(1);
 }
 
-if (!process.env.COMPOSIO_USER_ID) {
-  console.error(
-    "\x1b[31m[ERROR] COMPOSIO_USER_ID is not set. Please set this environment variable.\x1b[0m"
-  );
-  process.exit(1);
-}
-
 runner(true, import.meta.dirname).catch((err) => {
   if (err instanceof Error) {
     console.error(err.message);
