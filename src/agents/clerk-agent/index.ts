@@ -10,12 +10,12 @@ Your job is to manage people and companies in Attio based on Clerk user and orga
 3. For organization.created: ONLY update existing companies, NEVER create new ones
 4. Track what you've tried - do NOT repeat failed searches
 5. **NEVER use "contains" filters on ANY field - Attio doesn't support them**
+6. **NEVER use ATTIO_LIST_RECORDS - it causes token limit issues**
 
 ## Available ATTIO Tools:
-- \`ATTIO_FIND_RECORD\` - Find records 
+- \`ATTIO_FIND_RECORD\` - Find records (use this ONLY)
 - \`ATTIO_CREATE_RECORD\` - Create new records
 - \`ATTIO_UPDATE_RECORD\` - Update existing records
-- \`ATTIO_LIST_RECORDS\` - List records (use when searches fail)
 - \`ATTIO_GET_OBJECT\` - Get schema (emergency only)
 
 ## Workflow by Event Type:
@@ -96,6 +96,7 @@ Your job is to manage people and companies in Attio based on Clerk user and orga
       "email_addresses": "data.email_addresses[0].email_address"
     }
   }
+- If both fail: ABORT with error message
 
 **Step 2: Update person record**
 - call the ATTIO_UPDATE_RECORD tool with input:
@@ -130,13 +131,8 @@ Your job is to manage people and companies in Attio based on Clerk user and orga
       "user_id": "data.created_by"
     }
   }
-- If fails: call the ATTIO_LIST_RECORDS tool with input:
-  {
-    "object_type": "people",
-    "limit": 100
-  }
-  Then manually find person with matching user_id
-- If still fails: ABORT - log error and stop
+- If fails: Try alternative search by extracting creator email from org metadata if available
+- If still fails: ABORT - log error "Creator not found with user_id: data.created_by" and stop
 
 **Step 2: Extract company domain**
 - Get creator's email from person record: \`person.values.email_addresses[0].email_address\`
@@ -151,13 +147,8 @@ Your job is to manage people and companies in Attio based on Clerk user and orga
       "domains": "extracted_domain"
     }
   }
-- If fails: call the ATTIO_LIST_RECORDS tool with input:
-  {
-    "object_type": "companies",
-    "limit": 100
-  }
-  Then manually find company with matching domain in domains array
-- If still fails: ABORT - log error, do NOT create company
+- If fails: Try alternative search by company name derived from domain
+- If still fails: ABORT - log error "Company not found for domain: extracted_domain" and stop
 
 **Step 4: Update company with org**
 - Get current \`org_id\` from company: \`company.values.org_id[0].value\` (string)
@@ -179,10 +170,10 @@ Your job is to manage people and companies in Attio based on Clerk user and orga
 **CRITICAL RULES:**
 - Do NOT repeat failed searches
 - Do NOT create new companies  
-- If you can't find creator or company, ABORT with error message
+- If you can't find creator or company, ABORT with clear error message
 - **ONLY set org_id if it's currently empty - keep the first org created for each company**
 - **SKIP updating companies that already have an org_id**
-
+- **NEVER use ATTIO_LIST_RECORDS - it causes token limit errors**
 
 ## Efficiency & Error Handling:
 - Never repeat identical tool calls
@@ -190,6 +181,7 @@ Your job is to manage people and companies in Attio based on Clerk user and orga
 - If searches fail after one alternative, abort that search and log error
 - Prioritize completing workflow over perfect data
 - **CRITICAL: Never use contains/substring filters - Attio returns 400 errors**
+- **CRITICAL: Never use ATTIO_LIST_RECORDS - it causes token limit errors**
 - When a step fails, provide clear error logging before aborting
 
 ## Data Extraction:
