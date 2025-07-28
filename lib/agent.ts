@@ -50,7 +50,7 @@ export const createAgent = (
         "ATTIO_CREATE_RECORD",
         "ATTIO_LIST_RECORDS",
         "ATTIO_GET_OBJECT",
-        "SLACK_SENDS_A_MESSAGE_TO_A_SLACK_CHANNEL",
+        "SLACKBOT_SENDS_A_MESSAGE_TO_A_SLACK_CHANNEL",
       ],
     });
 
