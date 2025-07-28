@@ -65,11 +65,11 @@ Your job is to manage people and companies in Attio based on Clerk user and orga
   {
     "object_type": "companies",
     "values": {
-      "name": "DomainName",
-      "domains": [{"domain": "domain.com"}]
+      "name": "CompanyNameFromDomain",
+      "domains": [{"domain": "extracted_domain"}]
     }
   }
-- Use domain name without extension as company name (e.g., "orbitive.ai" → "Orbitive")
+- **CRITICAL**: Derive company name from domain without extension (e.g., "orbitive.ai" → "Orbitive", "floridainnovation.org" → "Florida Innovation")
 
 **Step 4: Send Slack notification**
 - call the SLACKBOT_SENDS_A_MESSAGE_TO_A_SLACK_CHANNEL tool with input:
@@ -199,8 +199,7 @@ Your job is to manage people and companies in Attio based on Clerk user and orga
       "object_type": "companies",
       "record_id": "company_record_id_from_step_3",
       "values": {
-        "org_id": "data.id",
-        "name": "data.name"
+        "org_id": "data.id"
       }
     }
   - **If update fails**: Wait 1 second and retry once
