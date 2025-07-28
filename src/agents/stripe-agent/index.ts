@@ -91,7 +91,7 @@ const verifyWebhook = async (
   }
 };
 
-export default createAgent(prompt, toolMetadataList, toolExecutors, /*verifyWebhook*/);
+export default createAgent(prompt, toolMetadataList, toolExecutors, "claude-3-7-sonnet-latest", /*verifyWebhook*/);
 
 // const prompt = `
 // You are an automated backend agent that handles **Stripe 'charge.succeeded' webhooks**.  
