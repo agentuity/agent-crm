@@ -191,24 +191,16 @@ Your job is to manage people and companies in Attio based on Clerk user and orga
 **LINEAR WORKFLOW:**
 
 **Step 1: Find companies with matching org_id**
-- call the ATTIO_LIST_RECORDS tool with input:
+- call the ATTIO_FIND_RECORD tool with input:
   {
-    "object_type": "companies",
-    "limit": 100
+    "object_id": "companies",
+    "limit": 1,
+    "attributes": {
+      "org_id": "data.id"
+    }
   }
-- Loop through each company record manually in code
-- For each company, get org_id value and parse: \`orgString.split('|')\`
-- Check if any parsed org contains \`data.id\` using string operations
-- **NEVER use ATTIO filters for org_id searches - always manual scanning**
 
-**Step 2: Parse and update org_id field**
-- Get current \`org_id\` value from company record
-- Parse existing string: \`orgString.split('|')\` to get array of "name:id" pairs
-- Find the pair containing \`data.id\`: \`pairs.find(pair => pair.includes(data.id))\`
-- Replace that pair with \`"[data.name]:[data.id]"\` format
-- Rejoin: \`updatedPairs.join('|')\`
-
-**Step 3: Update company record**
+**Step 2: Update company record**
 - call the ATTIO_UPDATE_RECORD tool with input:
   {
     "object_type": "companies",
