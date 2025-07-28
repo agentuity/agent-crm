@@ -1,4 +1,4 @@
-# Attio CRM Agents
+# CRM Agent
 
 <div align="center">
     <img src="https://raw.githubusercontent.com/agentuity/cli/refs/heads/main/.github/Agentuity.png" alt="Agentuity" width="100"/> <br/>
@@ -21,22 +21,27 @@ All agents use the shared createAgent template in src/lib/agent.ts, Composio too
 
 ## Installation
 1. Clone the repo:  
-    git clone https://github.com/your-org/attio-crm-agents.git  
-    cd attio-crm-agents  
-2. Install dependencies:  
-    npm install  
+    ```
+   git clone https://github.com/your-org/attio-crm-agents.git
+   cd attio-crm-agents
+    ```  
+3. Install dependencies:  
+    ```
+   npm install
+    ```  
 
 ## Configuration
 1. Copy the example env file:  
-    cp .env.example .env  
-2. Open .env and set:  
+    ```
+   cp .env.example .env
+    ``` 
+3. Open .env and set:
+   ``` 
     COMPOSIO_API_KEY=your_composio_api_key  
-    ATTIO_AUTH_TOKEN=your_attio_token  
-    ATTIO_WORKSPACE_ID=your_attio_workspace_id  
     STRIPE_API_KEY=sk_live_…  
     STRIPE_SIGNING_SECRET=whsec_…  
-    SLACK_WEBHOOK=your_slack_webhook
     SMARTLEAD_API_KEY=your_smartlead_api_key
+   ```
 
 ## Project Structure
     .
@@ -54,24 +59,23 @@ All agents use the shared createAgent template in src/lib/agent.ts, Composio too
 ## Agents
 
 ### Clerk Agent
-- File: src/agents/clerkAgent.ts  
+- File: `src/agents/clerkAgent.ts`
 - Purpose:  
     1. On user.created: find or create a Person in Attio, then find or create their Company.  
     2. On organization.created/updated: find existing company and update its org_id and/or name per rules.  
-- Key rules: max 6 iterations, no duplicate calls, no contains filters, linear workflows.
 
 ### SmartLead Agent
-- File: src/agents/smartLeadAgent.ts  
+- File: `src/agents/smartLeadAgent.ts`  
 - Purpose:  
-    1. On LEAD_CATEGORY_UPDATED: find or create Person and Company, then create a Deal.  
-    2. On EMAIL_REPLY: look up Person by email for follow-up logic.  
-- Tools: ATTIO_FIND_RECORD, ATTIO_CREATE_RECORD, etc.
+    1. On `LEAD_CATEGORY_UPDATED`: find or create Person and Company, then create a Deal. Ping the relevant person in Slack.
+    2. On `EMAIL_REPLY`: look up Person by email for follow-up logic.  
+- Tools: `ATTIO_FIND_RECORD`, `ATTIO_CREATE_RECORD`, etc.
 
 ### Stripe Agent
-- File: src/agents/stripeAgent.ts  
+- File: `src/agents/stripeAgent.ts`  
 - Purpose:  
     1. Verify `charge.succeeded` webhooks.  
-    2. Use getOrgIdFromCustomer, ATTIO_FIND_RECORD, latestAttioNumber, ATTIO_UPDATE_RECORD to update credits.  
+    2. Use getOrgIdFromCustomer, `ATTIO_FIND_RECORD`, `latestAttioNumber`, `ATTIO_UPDATE_RECORD` to update credits.  
 - Features: missing credits default to zero, judge loop to enforce single-tool usage.
 
 ## 📋 Prerequisites
