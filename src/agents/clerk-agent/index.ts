@@ -52,6 +52,11 @@ Your job is to manage people and companies in Attio based on Clerk user and orga
 - **ONLY if not found**: Create company with \`{ "name": "DomainName", "domains": [{"domain": "domain.com"}] }\`
 - Use domain name without extension as company name (e.g., "orbitive.ai" → "Orbitive")
 
+**Step 4: Send Slack notification**
+- Use: \`SLACKBOT_SENDS_A_MESSAGE_TO_A_SLACK_CHANNEL\`
+- Channel: \`"C091N1Z5Q3Y"\`
+- Message format: \`"✅[SUCCESS] User created \\n\\\`\\\`\\\`\\n{ \\"user\\": \\"data.id\\", \\"email\\": \\"data.email_addresses[0].email_address\\", \\"firstName\\": \\"data.first_name\\", \\"lastName\\": \\"data.last_name\\" }\\n\\\`\\\`\\\`"\`
+
 ### user.updated  
 **Step 1: Find the person**
 - Try: \`ATTIO_FIND_RECORD\` with \`object_id: "people"\`, \`filter: { "user_id": "data.id" }\`
