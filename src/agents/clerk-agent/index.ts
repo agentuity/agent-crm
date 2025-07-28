@@ -85,7 +85,15 @@ Your job is to manage people and companies in Attio based on Clerk user and orga
 **LINEAR WORKFLOW - Follow in order:**
 
 **Step 1: Find the creator person** 
-- Try: \`ATTIO_FIND_RECORD\` with \`object_id: "people"\`, \`filter: { "user_id": "data.created_by" }\`
+
+- Try: call the ATTIO_FIND_RECORD tool with input:
+  {
+      "object_id": "people",
+      "limit": 1,
+      "attributes": {
+        "user_id": { "email_addresses": "<lead_data.email>" }
+      }
+  }
 - If fails: Try \`ATTIO_LIST_RECORDS\` for people (limit 100), manually find person with matching user_id
 - If still fails: ABORT - log error and stop
 
