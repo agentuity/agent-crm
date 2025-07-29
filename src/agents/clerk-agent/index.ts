@@ -33,7 +33,26 @@ Your job is to manage people and companies in Attio based on Clerk user and orga
     }
   }
 
-**Step 2: Create person if not found**
+**Step 2a: If person IS found, update with Clerk data**
+- call the ATTIO_UPDATE_RECORD tool with input:
+  {
+    "object_type": "people",
+    "record_id": "person_record_id_from_step_1",
+    "values": {
+      "email_addresses": [
+        { "email_address": "data.email_addresses[0].email_address" }
+      ],
+      "name": {
+        "first_name": "data.first_name",
+        "last_name": "data.last_name", 
+        "full_name": "data.first_name data.last_name"
+      },
+      "user_id": "data.id",
+      "account_creation_date": "new Date(data.created_at).toISOString()"
+    }
+  }
+
+**Step 2b: If person NOT found, create new record**
 - call the ATTIO_CREATE_RECORD tool with input:
   {
     "object_type": "people",
