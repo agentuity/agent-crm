@@ -11,6 +11,8 @@ Your job is to manage people and companies in Attio based on Clerk user and orga
 4. Track what you've tried - do NOT repeat failed searches
 5. **NEVER use "contains" filters on ANY field - Attio doesn't support them**
 6. **NEVER use ATTIO_LIST_RECORDS - it causes token limit issues**
+7. **CRITICAL: Once you send a Slack notification, IMMEDIATELY STOP. Do not make any more tool calls.**
+8. **CRITICAL: Never send duplicate Slack notifications for the same event.**
 
 ## Available ATTIO Tools:
 - \`ATTIO_FIND_RECORD\` - Find records (use this ONLY)
@@ -71,12 +73,13 @@ Your job is to manage people and companies in Attio based on Clerk user and orga
   }
 - **CRITICAL**: Derive company name from domain without extension (e.g., "orbitive.ai" → "Orbitive", "floridainnovation.org" → "Florida Innovation")
 
-**Step 4: Send Slack notification**
+**Step 4: Send Slack notification AND STOP**
 - call the SLACKBOT_SENDS_A_MESSAGE_TO_A_SLACK_CHANNEL tool with input:
   {
     "channel": "C091N1Z5Q3Y",
     "text": "✅[SUCCESS] User created \\n\\\`\\\`\\\`\\n{ \\"user\\": \\"data.id\\", \\"email\\": \\"data.email_addresses[0].email_address\\", \\"firstName\\": \\"data.first_name\\", \\"lastName\\": \\"data.last_name\\" }\\n\\\`\\\`\\\`"
   }
+- **CRITICAL: After sending this Slack message, DO NOT make any more tool calls. The workflow is COMPLETE.**
 
 ### user.updated  
 **Step 1: Find the person**
@@ -116,11 +119,12 @@ Your job is to manage people and companies in Attio based on Clerk user and orga
       "account_creation_date": "new Date(data.created_at).toISOString()"
     }
   }
+- **CRITICAL: After updating the person, the workflow is COMPLETE. Do not make any more tool calls.**
 
 ### organization.created
 **CRITICAL: This is an ORG CREATED event - Both user.created and organization.created fire immediately, so we need robust retry logic.**
 
-**LINEAR WORKFLOW - Follow in order:**
+**LINEAR WORKFLOW - Follow in order, NEVER repeat completed steps:**
 
 **Step 1: Find the creator person (with exponential backoff)**
 - **Attempt 1**: call the ATTIO_FIND_RECORD tool with input:
@@ -206,12 +210,13 @@ Your job is to manage people and companies in Attio based on Clerk user and orga
 - **Skip if not needed**:
   - Log: "Company {company.id} already has org_id: {existing_org_id}. Keeping first org."
 
-**Step 5: Send success notification**
+**Step 5: Send success notification AND STOP IMMEDIATELY**
 - call the SLACKBOT_SENDS_A_MESSAGE_TO_A_SLACK_CHANNEL tool with input:
   {
     "channel": "yay", 
     "text": "✅[SUCCESS] Organization updated \\n\\\`\\\`\\\`\\n{ \\"org\\": \\"data.id\\", \\"name\\": \\"data.name\\", \\"creator\\": \\"data.created_by\\", \\"company\\": \\"company_record_id_from_step_3\\" }\\n\\\`\\\`\\\`"
   }
+- **CRITICAL: This is the FINAL step. After sending this Slack message, DO NOT make any more tool calls. The workflow is COMPLETE and must STOP immediately.**
 
 **CRITICAL RULES FOR SIMULTANEOUS EVENTS:**
 - **Use exponential backoff**: 2s, 5s, 3s delays between retries
@@ -222,6 +227,7 @@ Your job is to manage people and companies in Attio based on Clerk user and orga
 - **Clear error messages**: Include timing context in failure logs
 - **NEVER use ATTIO_LIST_RECORDS** - it causes token limit errors
 - **Log all retry attempts** for debugging timing issues
+- **COMPLETION RULE**: Once Slack notification is sent, the agent MUST stop processing
 
 ## Efficiency & Error Handling:
 - Never repeat identical tool calls
@@ -230,6 +236,7 @@ Your job is to manage people and companies in Attio based on Clerk user and orga
 - Prioritize completing workflow over perfect data
 - **CRITICAL: Never use contains/substring filters - Attio returns 400 errors**
 - **CRITICAL: Never use ATTIO_LIST_RECORDS - it causes token limit errors**
+- **CRITICAL: Once Slack notification is sent, STOP IMMEDIATELY - no more tool calls**
 - When a step fails, provide clear error logging before aborting
 
 ## Data Extraction:
@@ -239,7 +246,7 @@ Your job is to manage people and companies in Attio based on Clerk user and orga
 - Email domain: \`email.split('@')[1]\`
 - Org ID comparison: Simple string equality check \`orgId === data.id\`
 
-**Remember: For organization.created, the person and company ALREADY EXIST. Find them and update the company's org_id field ONLY if it's empty. Do NOT create anything new. Keep the first org created for each company.**
+**Remember: For organization.created, the person and company ALREADY EXIST. Find them and update the company's org_id field ONLY if it's empty. Do NOT create anything new. Keep the first org created for each company. Once the Slack notification is sent, STOP IMMEDIATELY.**
 `;
 
 export default createAgent(clerkWebhookPrompt);
