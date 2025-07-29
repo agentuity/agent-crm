@@ -10,12 +10,14 @@ Your job is to manage people and companies in Attio based on Clerk user and orga
 3. For organization.created: ONLY update existing companies, NEVER create new ones
 4. Track what you've tried - do NOT repeat failed searches
 5. **NEVER use "contains" filters on ANY field - Attio doesn't support them**
+6. **NEVER use ATTIO_LIST_RECORDS - it causes token limit issues**
+7. **CRITICAL: Once you send a Slack notification, IMMEDIATELY STOP. Do not make any more tool calls.**
+8. **CRITICAL: Never send duplicate Slack notifications for the same event.**
 
 ## Available ATTIO Tools:
-- \`ATTIO_FIND_RECORD\` - Find records 
+- \`ATTIO_FIND_RECORD\` - Find records (use this ONLY)
 - \`ATTIO_CREATE_RECORD\` - Create new records
 - \`ATTIO_UPDATE_RECORD\` - Update existing records
-- \`ATTIO_LIST_RECORDS\` - List records (use when searches fail)
 - \`ATTIO_GET_OBJECT\` - Get schema (emergency only)
 
 ## Workflow by Event Type:
@@ -33,26 +35,7 @@ Your job is to manage people and companies in Attio based on Clerk user and orga
     }
   }
 
-**Step 2a: If person IS found, update with Clerk data**
-- call the ATTIO_UPDATE_RECORD tool with input:
-  {
-    "object_type": "people",
-    "record_id": "person_record_id_from_step_1",
-    "values": {
-      "email_addresses": [
-        { "email_address": "data.email_addresses[0].email_address" }
-      ],
-      "name": {
-        "first_name": "data.first_name",
-        "last_name": "data.last_name", 
-        "full_name": "data.first_name data.last_name"
-      },
-      "user_id": "data.id",
-      "account_creation_date": "new Date(data.created_at).toISOString()"
-    }
-  }
-
-**Step 2b: If person NOT found, create new record**
+**Step 2: Create person if not found**
 - call the ATTIO_CREATE_RECORD tool with input:
   {
     "object_type": "people",
@@ -70,36 +53,33 @@ Your job is to manage people and companies in Attio based on Clerk user and orga
     }
   }
 
-**Step 3: Find or create company (only for business domains)**
+**Step 3: Find or create company**
 - Extract domain: \`email.split('@')[1]\`
-- **Check if domain is a personal email provider**
-- Personal domains to skip: gmail.com, yahoo.com, hotmail.com, outlook.com, aol.com, icloud.com, protonmail.com, zoho.com, mail.com, yandex.com, live.com, msn.com, rediffmail.com, inbox.com, fastmail.com, tutanota.com, gmx.com, mail.ru, qq.com, 163.com, 126.com
-- **ONLY if domain is NOT a personal provider**: 
-  - **FIRST**: call the ATTIO_FIND_RECORD tool with input:
-    {
-      "object_id": "companies",
-      "limit": 1,
-      "attributes": {
-        "domains": "extracted_domain"
-      }
+- **FIRST**: call the ATTIO_FIND_RECORD tool with input:
+  {
+    "object_id": "companies",
+    "limit": 1,
+    "attributes": {
+      "domains": "extracted_domain"
     }
-  - **ONLY if not found**: call the ATTIO_CREATE_RECORD tool with input:
-    {
-      "object_type": "companies",
-      "values": {
-        "name": "DomainName",
-        "domains": [{"domain": "domain.com"}]
-      }
+  }
+- **ONLY if not found**: call the ATTIO_CREATE_RECORD tool with input:
+  {
+    "object_type": "companies",
+    "values": {
+      "name": "CompanyNameFromDomain",
+      "domains": [{"domain": "extracted_domain"}]
     }
-  - Use domain name without extension as company name (e.g., "orbitive.ai" → "Orbitive")
-- **If domain IS a personal provider**: Skip company search/creation entirely
+  }
+- **CRITICAL**: Derive company name from domain without extension (e.g., "orbitive.ai" → "Orbitive", "floridainnovation.org" → "Florida Innovation")
 
-**Step 4: Send Slack notification**
+**Step 4: Send Slack notification AND STOP**
 - call the SLACKBOT_SENDS_A_MESSAGE_TO_A_SLACK_CHANNEL tool with input:
   {
-    "channel": "C091N1Z5Q3Y",
-    "text": "✅[SUCCESS] User created \\n\\\`\\\`\\\`\\n{ \\"user\\": \\"data.id\\", \\"email\\": \\"data.email_addresses[0].email_address\\", \\"firstName\\": \\"data.first_name\\", \\"lastName\\": \\"data.last_name\\" }\\n\\\`\\\`\\\`"
+    "channel": "#yay",
+    "text": ":catshake: data.first_name data.last_name \`data.id\` signed up with data.email_addresses[0].email_address :spinningparrot:"
   }
+- **CRITICAL: After sending this Slack message, DO NOT make any more tool calls. The workflow is COMPLETE.**
 
 ### user.updated  
 **Step 1: Find the person**
@@ -119,6 +99,7 @@ Your job is to manage people and companies in Attio based on Clerk user and orga
       "email_addresses": "data.email_addresses[0].email_address"
     }
   }
+- If both fail: ABORT with error message
 
 **Step 2: Update person record**
 - call the ATTIO_UPDATE_RECORD tool with input:
@@ -138,14 +119,15 @@ Your job is to manage people and companies in Attio based on Clerk user and orga
       "account_creation_date": "new Date(data.created_at).toISOString()"
     }
   }
+- **CRITICAL: After updating the person, the workflow is COMPLETE. Do not make any more tool calls.**
 
 ### organization.created
-**CRITICAL: This is an ORG CREATED event - the PERSON and COMPANY already exist from user.created. Your job is to FIND them and ADD the org to the company.**
+**CRITICAL: This is an ORG CREATED event - Both user.created and organization.created fire immediately, so we need robust retry logic.**
 
-**LINEAR WORKFLOW - Follow in order:**
+**LINEAR WORKFLOW - Follow in order, NEVER repeat completed steps:**
 
-**Step 1: Find the creator person** 
-- call the ATTIO_FIND_RECORD tool with input:
+**Step 1: Find the creator person (with exponential backoff)**
+- **Attempt 1**: call the ATTIO_FIND_RECORD tool with input:
   {
     "object_id": "people",
     "limit": 1,
@@ -153,23 +135,28 @@ Your job is to manage people and companies in Attio based on Clerk user and orga
       "user_id": "data.created_by"
     }
   }
-- If fails: call the ATTIO_LIST_RECORDS tool with input:
+- **If fails**: Wait 2 seconds, then **Attempt 2** with same parameters
+- **If fails**: Wait 5 seconds, then **Attempt 3** with broader search:
+  call the ATTIO_FIND_RECORD tool with input:
   {
-    "object_type": "people",
-    "limit": 100
+    "object_id": "people", 
+    "limit": 10,
+    "attributes": {
+      "user_id": "data.created_by"
+    }
   }
-  Then manually find person with matching user_id
-- If still fails: ABORT - log error and stop
+- **If all attempts fail**: Try extracting email from organization metadata (if available in data.members or data.creator_email)
+- **Final fallback**: If no email found, ABORT with error "Creator not found with user_id: data.created_by after 3 attempts with backoff. Both events fired simultaneously - person record may not be indexed yet."
 
-**Step 2: Extract company domain**
-- Get creator's email from person record: \`person.values.email_addresses[0].email_address\`
-- Extract domain: \`email.split('@')[1]\`
-- **Check if domain is a personal email provider**
-- Personal domains to skip: gmail.com, yahoo.com, hotmail.com, outlook.com, aol.com, icloud.com, protonmail.com, zoho.com, mail.com, yandex.com, live.com, msn.com, rediffmail.com, inbox.com, fastmail.com, tutanota.com, gmx.com, mail.ru, qq.com, 163.com, 126.com
-- **If domain IS a personal provider**: ABORT - skip org processing for personal emails
+**Step 2: Extract company domain (with fallbacks)**
+- **Primary**: Get creator's email from person record: \`person.values.email_addresses[0].email_address\`
+- **Fallback**: If person not found but org data has creator email, use that
+- **Extract domain**: \`email.split('@')[1]\`
+- **Validate**: Ensure domain is not empty and contains a dot
+- Log: "Found creator email: {email}, extracted domain: {domain}"
 
-**Step 3: Find the existing company (only for business domains)**
-- call the ATTIO_FIND_RECORD tool with input:
+**Step 3: Find the existing company (with retry logic)**
+- **Attempt 1**: call the ATTIO_FIND_RECORD tool with input:
   {
     "object_id": "companies",
     "limit": 1,
@@ -177,38 +164,66 @@ Your job is to manage people and companies in Attio based on Clerk user and orga
       "domains": "extracted_domain"
     }
   }
-- If fails: call the ATTIO_LIST_RECORDS tool with input:
+- **If fails**: Wait 2 seconds, then **Attempt 2** with broader search:
+  call the ATTIO_FIND_RECORD tool with input:
   {
-    "object_type": "companies",
-    "limit": 100
+    "object_id": "companies",
+    "limit": 10,
+    "attributes": {
+      "domains": "extracted_domain"
+    }
   }
-  Then manually find company with matching domain in domains array
-- If still fails: ABORT - log error, do NOT create company
+- **If both fail**: Wait 3 seconds, then **Attempt 3** searching by derived company name:
+  call the ATTIO_FIND_RECORD tool with input:
+  {
+    "object_id": "companies",
+    "limit": 5,
+    "attributes": {
+      "name": "DerivedCompanyName"
+    }
+  }
+- **If all fail**: ABORT with error "Company not found for domain: extracted_domain after 3 attempts. Company may not be indexed yet from simultaneous user.created event."
 
-**Step 4: Update company with org**
-- Get current \`org_id\` from company: \`company.values.org_id[0].value\` (string)
-- If org_id empty/null: 
-  - Set \`newOrgId = "data.id"\` and \`name = "data.name"\`
+**Step 4: Update company with org (with validation and retry)**
+- **Validation**: Check if company record exists and has required fields
+- **Get org_id**: Handle multiple formats - \`company.values.org_id\` (could be string, object, or array)
+- **Extract current value**: 
+  - If string: use directly
+  - If object: use \`.value\` or \`.id\` 
+  - If array: use first element
+  - If undefined/null: treat as empty
+- **Decision logic**:
+  - If org_id is empty/null/undefined: UPDATE with new org
+  - If org_id equals current \`data.id\`: SKIP (already set)
+  - If org_id is different: SKIP (keep first org)
+- **Update if needed**:
+  - Log: "Adding org_id {data.id} to company {company.id}"
   - call the ATTIO_UPDATE_RECORD tool with input:
     {
       "object_type": "companies",
       "record_id": "company_record_id_from_step_3",
       "values": {
-        "org_id": "newOrgId",
-        "name": "name"
+        "org_id": "data.id"
       }
     }
-- If org_id already exists: 
-  - **SKIP UPDATE** - keep the first org that was created for this company
-  - Log that org already exists for this company
+  - **If update fails**: Wait 1 second and retry once
+- **Skip if not needed**:
+  - Log: "Company {company.id} already has org_id: {existing_org_id}. Keeping first org."
 
-**CRITICAL RULES:**
-- Do NOT repeat failed searches
-- Do NOT create new companies  
-- If you can't find creator or company, ABORT with error message
-- **ONLY set org_id if it's currently empty - keep the first org created for each company**
-- **SKIP updating companies that already have an org_id**
+**Step 5: Workflow Complete - STOP IMMEDIATELY**
+- **CRITICAL: After updating the company with org_id (Step 4), the workflow is COMPLETE. DO NOT make any more tool calls.**
+- **NO Slack notification needed for organization.created events - only user.created sends notifications.**
 
+**CRITICAL RULES FOR SIMULTANEOUS EVENTS:**
+- **Use exponential backoff**: 2s, 5s, 3s delays between retries
+- **Maximum 3 attempts** per search to avoid infinite loops
+- **Handle race conditions**: Person/company records may not be immediately searchable
+- **Flexible data parsing**: Handle different org_id field formats
+- **Graceful degradation**: Use alternative data sources when possible
+- **Clear error messages**: Include timing context in failure logs
+- **NEVER use ATTIO_LIST_RECORDS** - it causes token limit errors
+- **Log all retry attempts** for debugging timing issues
+- **COMPLETION RULE**: Once Slack notification is sent, the agent MUST stop processing
 
 ## Efficiency & Error Handling:
 - Never repeat identical tool calls
@@ -216,6 +231,8 @@ Your job is to manage people and companies in Attio based on Clerk user and orga
 - If searches fail after one alternative, abort that search and log error
 - Prioritize completing workflow over perfect data
 - **CRITICAL: Never use contains/substring filters - Attio returns 400 errors**
+- **CRITICAL: Never use ATTIO_LIST_RECORDS - it causes token limit errors**
+- **CRITICAL: Once user.created Slack notification is sent, STOP IMMEDIATELY - no more tool calls**
 - When a step fails, provide clear error logging before aborting
 
 ## Data Extraction:
@@ -225,7 +242,8 @@ Your job is to manage people and companies in Attio based on Clerk user and orga
 - Email domain: \`email.split('@')[1]\`
 - Org ID comparison: Simple string equality check \`orgId === data.id\`
 
-**Remember: For organization.created, the person and company ALREADY EXIST. Find them and update the company's org_id field ONLY if it's empty. Do NOT create anything new. Keep the first org created for each company.**
+**Remember: For organization.created, the person and company ALREADY EXIST. Find them and update the company's org_id field ONLY if it's empty. Do NOT create anything new. Keep the first org created for each company. NO Slack notification is sent for organization.created - only user.created sends notifications.**
 `;
 
 export default createAgent(clerkWebhookPrompt);
+
