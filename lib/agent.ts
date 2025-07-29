@@ -292,6 +292,7 @@ Respond ONLY with the JSON decision object, no other text:
       iteration++;
     }
 
+    ctx.logger.info("Ran out of iterations.");
     return resp.text("Ran out of iterations.");
   };
 };
