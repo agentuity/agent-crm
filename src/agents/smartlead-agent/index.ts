@@ -81,7 +81,7 @@ If the event_type is LEAD_CATEGORY_UPDATED, you should:
           "values": {
             "name": "Deal with <lead_data.company_name>",
             "stage": "Lead",
-            "owner": "nmirigliani@agentuity.com",
+            "owner": "rblalock@agentuity.com",
             "value": 0,
             "associated_people": ["<personRecordId_1>", "<personRecordId_2>", ...],
             "associated_company": companyRecordId,
@@ -135,9 +135,8 @@ If the event_type is EMAIL_REPLY, you should:
       <@ID>, you have an email to look at in your inbox (<from_email>) from <to_name> (<to_email>).
       "
 
-      where ID is the user id of the person who should receive the message. You must determine this to be either Matthew Congrove, Jeff Haynie, or Rick Blalock based on the from_email.
+      where ID is the user id of the person who should receive the message. You must determine this to be either Jeff Haynie or Rick Blalock based on the from_email.
       The ids are:
-      - Matthew Congrove: U08A0FWLM24
       - Jeff Haynie: U08993W8V0T
       - Rick Blalock: U088UL77GDV
       You must keep the ids in the format <@ID> including the "<@" and ">".
@@ -151,11 +150,3 @@ If the event_type is EMAIL_REPLY, you should:
 `;
 
 export default createAgent(prompt, toolMetadataList, toolExecutors);
-
-// {"email_addresses": ["nmirigliani@agentuity.com"]}
-
-// 3. call the ATTIO_LIST_RECORDS tool with input:
-//     {
-//       "object_type": "deals",
-//       "limit": 100,
-//     }
