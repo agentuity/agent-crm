@@ -70,25 +70,29 @@ Your job is to manage people and companies in Attio based on Clerk user and orga
     }
   }
 
-**Step 3: Find or create company**
+**Step 3: Find or create company (only for business domains)**
 - Extract domain: \`email.split('@')[1]\`
-- **FIRST**: call the ATTIO_FIND_RECORD tool with input:
-  {
-    "object_id": "companies",
-    "limit": 1,
-    "attributes": {
-      "domains": "extracted_domain"
+- **Check if domain is a personal email provider**
+- Personal domains to skip: gmail.com, yahoo.com, hotmail.com, outlook.com, aol.com, icloud.com, protonmail.com, zoho.com, mail.com, yandex.com, live.com, msn.com, rediffmail.com, inbox.com, fastmail.com, tutanota.com, gmx.com, mail.ru, qq.com, 163.com, 126.com
+- **ONLY if domain is NOT a personal provider**: 
+  - **FIRST**: call the ATTIO_FIND_RECORD tool with input:
+    {
+      "object_id": "companies",
+      "limit": 1,
+      "attributes": {
+        "domains": "extracted_domain"
+      }
     }
-  }
-- **ONLY if not found**: call the ATTIO_CREATE_RECORD tool with input:
-  {
-    "object_type": "companies",
-    "values": {
-      "name": "DomainName",
-      "domains": [{"domain": "domain.com"}]
+  - **ONLY if not found**: call the ATTIO_CREATE_RECORD tool with input:
+    {
+      "object_type": "companies",
+      "values": {
+        "name": "DomainName",
+        "domains": [{"domain": "domain.com"}]
+      }
     }
-  }
-- Use domain name without extension as company name (e.g., "orbitive.ai" → "Orbitive")
+  - Use domain name without extension as company name (e.g., "orbitive.ai" → "Orbitive")
+- **If domain IS a personal provider**: Skip company search/creation entirely
 
 **Step 4: Send Slack notification**
 - call the SLACKBOT_SENDS_A_MESSAGE_TO_A_SLACK_CHANNEL tool with input:
@@ -160,8 +164,11 @@ Your job is to manage people and companies in Attio based on Clerk user and orga
 **Step 2: Extract company domain**
 - Get creator's email from person record: \`person.values.email_addresses[0].email_address\`
 - Extract domain: \`email.split('@')[1]\`
+- **Check if domain is a personal email provider**
+- Personal domains to skip: gmail.com, yahoo.com, hotmail.com, outlook.com, aol.com, icloud.com, protonmail.com, zoho.com, mail.com, yandex.com, live.com, msn.com, rediffmail.com, inbox.com, fastmail.com, tutanota.com, gmx.com, mail.ru, qq.com, 163.com, 126.com
+- **If domain IS a personal provider**: ABORT - skip org processing for personal emails
 
-**Step 3: Find the existing company**
+**Step 3: Find the existing company (only for business domains)**
 - call the ATTIO_FIND_RECORD tool with input:
   {
     "object_id": "companies",
