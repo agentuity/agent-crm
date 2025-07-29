@@ -35,7 +35,26 @@ Your job is to manage people and companies in Attio based on Clerk user and orga
     }
   }
 
-**Step 2: Create person if not found**
+**Step 2a: If person IS found, update with Clerk data**
+- call the ATTIO_UPDATE_RECORD tool with input:
+  {
+    "object_type": "people",
+    "record_id": "person_record_id_from_step_1",
+    "values": {
+      "email_addresses": [
+        { "email_address": "data.email_addresses[0].email_address" }
+      ],
+      "name": {
+        "first_name": "data.first_name",
+        "last_name": "data.last_name", 
+        "full_name": "data.first_name data.last_name"
+      },
+      "user_id": "data.id",
+      "account_creation_date": "new Date(data.created_at).toISOString()"
+    }
+  }
+
+**Step 2b: If person NOT found, create new record**
 - call the ATTIO_CREATE_RECORD tool with input:
   {
     "object_type": "people",
@@ -53,25 +72,29 @@ Your job is to manage people and companies in Attio based on Clerk user and orga
     }
   }
 
-**Step 3: Find or create company**
+**Step 3: Find or create company (only for business domains)**
 - Extract domain: \`email.split('@')[1]\`
-- **FIRST**: call the ATTIO_FIND_RECORD tool with input:
-  {
-    "object_id": "companies",
-    "limit": 1,
-    "attributes": {
-      "domains": "extracted_domain"
+- **Check if domain is a personal email provider**
+- Personal domains to skip: gmail.com, yahoo.com, hotmail.com, outlook.com, aol.com, icloud.com, protonmail.com, zoho.com, mail.com, yandex.com, live.com, msn.com, rediffmail.com, inbox.com, fastmail.com, tutanota.com, gmx.com, mail.ru, qq.com, 163.com, 126.com
+- **ONLY if domain is NOT a personal provider**: 
+  - **FIRST**: call the ATTIO_FIND_RECORD tool with input:
+    {
+      "object_id": "companies",
+      "limit": 1,
+      "attributes": {
+        "domains": "extracted_domain"
+      }
     }
-  }
-- **ONLY if not found**: call the ATTIO_CREATE_RECORD tool with input:
-  {
-    "object_type": "companies",
-    "values": {
-      "name": "CompanyNameFromDomain",
-      "domains": [{"domain": "extracted_domain"}]
+  - **ONLY if not found**: call the ATTIO_CREATE_RECORD tool with input:
+    {
+      "object_type": "companies",
+      "values": {
+        "name": "DomainName",
+        "domains": [{"domain": "domain.com"}]
+      }
     }
-  }
-- **CRITICAL**: Derive company name from domain without extension (e.g., "orbitive.ai" → "Orbitive", "floridainnovation.org" → "Florida Innovation")
+  - Use domain name without extension as company name (e.g., "orbitive.ai" → "Orbitive")
+- **If domain IS a personal provider**: Skip company search/creation entirely
 
 **Step 4: Send Slack notification AND STOP**
 - call the SLACKBOT_SENDS_A_MESSAGE_TO_A_SLACK_CHANNEL tool with input:
