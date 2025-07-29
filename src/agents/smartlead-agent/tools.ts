@@ -2,111 +2,111 @@
 
 import type { AgentContext } from "@agentuity/sdk";
 
-export interface SmartLeadResponse {
-  id?: string;
-  lead_campaign_data?: {
-    campaign_id?: string;
-  }[];
-  custom_fields?: {
-    custom_lead_status?: string;
-  };
-}
+// export interface SmartLeadResponse {
+//   id?: string;
+//   lead_campaign_data?: {
+//     campaign_id?: string;
+//   }[];
+//   custom_fields?: {
+//     custom_lead_status?: string;
+//   };
+// }
 
-async function getFromSmartLead(url: string): Promise<SmartLeadResponse> {
-  const api_key = process.env.SMARTLEAD_API_KEY;
-  if (!api_key) {
-    throw new Error("SMARTLEAD_API_KEY environment variable is not set");
-  }
-  const new_url = url + `&api_key=${api_key}`;
-  console.log("new_url:", new_url);
-  const response = await fetch(new_url);
-  if (!response.ok) {
-    throw new Error("Failed to get data from SmartLead");
-  }
-  const data = (await response.json()) as SmartLeadResponse;
-  return data;
-}
+// async function getFromSmartLead(url: string): Promise<SmartLeadResponse> {
+//   const api_key = process.env.SMARTLEAD_API_KEY;
+//   if (!api_key) {
+//     throw new Error("SMARTLEAD_API_KEY environment variable is not set");
+//   }
+//   const new_url = url + `&api_key=${api_key}`;
+//   console.log("new_url:", new_url);
+//   const response = await fetch(new_url);
+//   if (!response.ok) {
+//     throw new Error("Failed to get data from SmartLead");
+//   }
+//   const data = (await response.json()) as SmartLeadResponse;
+//   return data;
+// }
 
-async function updateSmartLeadStatus(
-  lead_email: string,
-  custom_lead_status: string
-) {
-  // Get lead info
-  let smartlead_response = await getFromSmartLead(
-    `https://server.smartlead.ai/api/v1/leads?email=${encodeURIComponent(
-      lead_email.trim()
-    )}`
-  );
-  if (smartlead_response) {
-    let lead_id = smartlead_response?.id;
-    let campaign_id = smartlead_response?.lead_campaign_data?.[0]?.campaign_id;
-    if (lead_id && campaign_id) {
-      const api_key = process.env.SMARTLEAD_API_KEY;
-      const url = `https://server.smartlead.ai/api/v1/campaigns/${campaign_id}/leads/${lead_id}?api_key=${api_key}`;
-      const lead_input = {
-        email: lead_email,
-        custom_fields: {
-          custom_lead_status,
-        },
-      };
-      const response = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(lead_input),
-      });
-      if (!response.ok) {
-        throw new Error(
-          `Failed to update lead status: ${response.status} ${response.statusText}`
-        );
-      }
-      const result = await response.json();
-      return result;
-    }
-  }
-  throw new Error("Person not found in SmartLead or missing campaign/lead id.");
-}
+// async function updateSmartLeadStatus(
+//   lead_email: string,
+//   custom_lead_status: string
+// ) {
+//   // Get lead info
+//   let smartlead_response = await getFromSmartLead(
+//     `https://server.smartlead.ai/api/v1/leads?email=${encodeURIComponent(
+//       lead_email.trim()
+//     )}`
+//   );
+//   if (smartlead_response) {
+//     let lead_id = smartlead_response?.id;
+//     let campaign_id = smartlead_response?.lead_campaign_data?.[0]?.campaign_id;
+//     if (lead_id && campaign_id) {
+//       const api_key = process.env.SMARTLEAD_API_KEY;
+//       const url = `https://server.smartlead.ai/api/v1/campaigns/${campaign_id}/leads/${lead_id}?api_key=${api_key}`;
+//       const lead_input = {
+//         email: lead_email,
+//         custom_fields: {
+//           custom_lead_status,
+//         },
+//       };
+//       const response = await fetch(url, {
+//         method: "POST",
+//         headers: { "Content-Type": "application/json" },
+//         body: JSON.stringify(lead_input),
+//       });
+//       if (!response.ok) {
+//         throw new Error(
+//           `Failed to update lead status: ${response.status} ${response.statusText}`
+//         );
+//       }
+//       const result = await response.json();
+//       return result;
+//     }
+//   }
+//   throw new Error("Person not found in SmartLead or missing campaign/lead id.");
+// }
 
 // --- Tool Definitions ---
 
 export const toolMetadataList = [
-  {
-    name: "SMARTLEAD_GET_LEAD_STATUS",
-    description:
-      "Get the lead status from SmartLead for a given email address.",
-    input_schema: {
-      type: "object",
-      properties: {
-        email: {
-          type: "string",
-          description: "The email address of the lead to check.",
-          title: "Lead Email",
-          examples: ["john.doe@example.com"],
-        },
-      },
-      required: ["email"],
-      title: "GetLeadStatusRequest",
-    },
-    cache_control: undefined,
-  },
-  {
-    name: "SMARTLEAD_SET_LEAD_STATUS_POSITIVE",
-    description:
-      'Set the lead status to "positive" in SmartLead for a given email address.',
-    input_schema: {
-      type: "object",
-      properties: {
-        email: {
-          type: "string",
-          description: "The email address of the lead to update.",
-          title: "Lead Email",
-          examples: ["john.doe@example.com"],
-        },
-      },
-      required: ["email"],
-      title: "SetLeadStatusPositiveRequest",
-    },
-    cache_control: undefined,
-  },
+  // {
+  //   name: "SMARTLEAD_GET_LEAD_STATUS",
+  //   description:
+  //     "Get the lead status from SmartLead for a given email address.",
+  //   input_schema: {
+  //     type: "object",
+  //     properties: {
+  //       email: {
+  //         type: "string",
+  //         description: "The email address of the lead to check.",
+  //         title: "Lead Email",
+  //         examples: ["john.doe@example.com"],
+  //       },
+  //     },
+  //     required: ["email"],
+  //     title: "GetLeadStatusRequest",
+  //   },
+  //   cache_control: undefined,
+  // },
+  // {
+  //   name: "SMARTLEAD_SET_LEAD_STATUS_POSITIVE",
+  //   description:
+  //     'Set the lead status to "positive" in SmartLead for a given email address.',
+  //   input_schema: {
+  //     type: "object",
+  //     properties: {
+  //       email: {
+  //         type: "string",
+  //         description: "The email address of the lead to update.",
+  //         title: "Lead Email",
+  //         examples: ["john.doe@example.com"],
+  //       },
+  //     },
+  //     required: ["email"],
+  //     title: "SetLeadStatusPositiveRequest",
+  //   },
+  //   cache_control: undefined,
+  // },
   {
     name: "KV_STORE_EMAIL",
     description: "Store an email in the KV store.",
@@ -159,37 +159,36 @@ export const toolMetadataList = [
 
 // --- Tool Executors ---
 export const toolExecutors: Record<string, Function> = {
-  SMARTLEAD_GET_LEAD_STATUS: async (
-    { email }: { email: string },
-    ctx: AgentContext
-  ) => {
-    try {
-      const smartlead_response = await getFromSmartLead(
-        `https://server.smartlead.ai/api/v1/leads?email=${encodeURIComponent(
-          email.trim()
-        )}`
-      );
-      const lead_status = smartlead_response?.custom_fields?.custom_lead_status;
-      return { lead_status };
-    } catch (error) {
-      ctx.logger.error("Failed to get lead status: %s", error);
-      throw error;
-    }
-  },
+  // SMARTLEAD_GET_LEAD_STATUS: async (
+  //   { email }: { email: string },
+  //   ctx: AgentContext
+  // ) => {
+  //   try {
+  //     const smartlead_response = await getFromSmartLead(
+  //       `https://server.smartlead.ai/api/v1/leads?email=${encodeURIComponent(
+  //         email.trim()
+  //       )}`
+  //     );
+  //     const lead_status = smartlead_response?.custom_fields?.custom_lead_status;
+  //     return { lead_status };
+  //   } catch (error) {
+  //     ctx.logger.error("Failed to get lead status: %s", error);
+  //     throw error;
+  //   }
+  // },
 
-  SMARTLEAD_SET_LEAD_STATUS_POSITIVE: async (
-    { email }: { email: string },
-    ctx: AgentContext
-  ) => {
-    try {
-      const result = await updateSmartLeadStatus(email, "positive");
-      return { success: true, result };
-    } catch (error) {
-      ctx.logger.error("Failed to set lead status to positive: %s", error);
-      throw error;
-    }
-  },
-
+  // SMARTLEAD_SET_LEAD_STATUS_POSITIVE: async (
+  //   { email }: { email: string },
+  //   ctx: AgentContext
+  // ) => {
+  //   try {
+  //     const result = await updateSmartLeadStatus(email, "positive");
+  //     return { success: true, result };
+  //   } catch (error) {
+  //     ctx.logger.error("Failed to set lead status to positive: %s", error);
+  //     throw error;
+  //   }
+  // },
   KV_STORE_EMAIL: async (
     {
       from_email,

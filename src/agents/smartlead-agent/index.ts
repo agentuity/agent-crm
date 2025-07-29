@@ -20,6 +20,7 @@ If the event_type is EMAIL_REPLY, the webhook will contain the following importa
 - to_email: The email of the potential lead
 - to_name: The name of the potential lead
 - reply_message.html: The body of the email reply
+- campaign_id: The id of the campaign that the email reply is associated with
 
 ## Workflow
 Based on the event type you should follow one of the following workflows **sequentially, with no deviation**.
@@ -98,13 +99,7 @@ If the event_type is LEAD_CATEGORY_UPDATED, you should:
         }
       The goal is to add the person to the existing deal.
 
-  4. Call the SMARTLEAD_SET_LEAD_STATUS_POSITIVE with input:
-      {
-        "email": "<lead_data.email>"
-      }
-  Once you have done this, you should not make any more tool calls and stop completely.
-
-  5. Finally, call the KV_STORE_POSITIVE_LEAD tool with input:
+  4. Finally, call the KV_STORE_POSITIVE_LEAD tool with input:
     {
       "email": "<lead_data.email>"
     }
