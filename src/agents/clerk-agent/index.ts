@@ -209,7 +209,7 @@ Your job is to manage people and companies in Attio based on Clerk user and orga
 **Step 5: Send success notification**
 - call the SLACKBOT_SENDS_A_MESSAGE_TO_A_SLACK_CHANNEL tool with input:
   {
-    "channel": "C091N1Z5Q3Y", 
+    "channel": "yay", 
     "text": "✅[SUCCESS] Organization updated \\n\\\`\\\`\\\`\\n{ \\"org\\": \\"data.id\\", \\"name\\": \\"data.name\\", \\"creator\\": \\"data.created_by\\", \\"company\\": \\"company_record_id_from_step_3\\" }\\n\\\`\\\`\\\`"
   }
 
