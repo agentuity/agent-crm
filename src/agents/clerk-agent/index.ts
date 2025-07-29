@@ -77,7 +77,7 @@ Your job is to manage people and companies in Attio based on Clerk user and orga
 - call the SLACKBOT_SENDS_A_MESSAGE_TO_A_SLACK_CHANNEL tool with input:
   {
     "channel": "#yay",
-    "text": ":catshake: data.first_name data.last_name (data.id) signed up with data.email_addresses[0].email_address :spinningparrot:"
+    "text": ":catshake: data.first_name data.last_name \`data.id\` signed up with data.email_addresses[0].email_address :spinningparrot:"
   }
 - **CRITICAL: After sending this Slack message, DO NOT make any more tool calls. The workflow is COMPLETE.**
 
