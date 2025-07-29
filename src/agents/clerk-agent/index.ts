@@ -76,8 +76,8 @@ Your job is to manage people and companies in Attio based on Clerk user and orga
 **Step 4: Send Slack notification AND STOP**
 - call the SLACKBOT_SENDS_A_MESSAGE_TO_A_SLACK_CHANNEL tool with input:
   {
-    "channel": "C091N1Z5Q3Y",
-    "text": "✅[SUCCESS] User created \\n\\\`\\\`\\\`\\n{ \\"user\\": \\"data.id\\", \\"email\\": \\"data.email_addresses[0].email_address\\", \\"firstName\\": \\"data.first_name\\", \\"lastName\\": \\"data.last_name\\" }\\n\\\`\\\`\\\`"
+    "channel": "#yay",
+    "text": ":catshake: data.first_name data.last_name (data.id) signed up with data.email_addresses[0].email_address :spinningparrot:"
   }
 - **CRITICAL: After sending this Slack message, DO NOT make any more tool calls. The workflow is COMPLETE.**
 
@@ -210,13 +210,9 @@ Your job is to manage people and companies in Attio based on Clerk user and orga
 - **Skip if not needed**:
   - Log: "Company {company.id} already has org_id: {existing_org_id}. Keeping first org."
 
-**Step 5: Send success notification AND STOP IMMEDIATELY**
-- call the SLACKBOT_SENDS_A_MESSAGE_TO_A_SLACK_CHANNEL tool with input:
-  {
-    "channel": "#yay", 
-    "text": "✅[SUCCESS] Organization updated \\n\\\`\\\`\\\`\\n{ \\"org\\": \\"data.id\\", \\"name\\": \\"data.name\\", \\"creator\\": \\"data.created_by\\", \\"company\\": \\"company_record_id_from_step_3\\" }\\n\\\`\\\`\\\`"
-  }
-- **CRITICAL: This is the FINAL step. After sending this Slack message, DO NOT make any more tool calls. The workflow is COMPLETE and must STOP immediately.**
+**Step 5: Workflow Complete - STOP IMMEDIATELY**
+- **CRITICAL: After updating the company with org_id (Step 4), the workflow is COMPLETE. DO NOT make any more tool calls.**
+- **NO Slack notification needed for organization.created events - only user.created sends notifications.**
 
 **CRITICAL RULES FOR SIMULTANEOUS EVENTS:**
 - **Use exponential backoff**: 2s, 5s, 3s delays between retries
@@ -236,7 +232,7 @@ Your job is to manage people and companies in Attio based on Clerk user and orga
 - Prioritize completing workflow over perfect data
 - **CRITICAL: Never use contains/substring filters - Attio returns 400 errors**
 - **CRITICAL: Never use ATTIO_LIST_RECORDS - it causes token limit errors**
-- **CRITICAL: Once Slack notification is sent, STOP IMMEDIATELY - no more tool calls**
+- **CRITICAL: Once user.created Slack notification is sent, STOP IMMEDIATELY - no more tool calls**
 - When a step fails, provide clear error logging before aborting
 
 ## Data Extraction:
@@ -246,7 +242,7 @@ Your job is to manage people and companies in Attio based on Clerk user and orga
 - Email domain: \`email.split('@')[1]\`
 - Org ID comparison: Simple string equality check \`orgId === data.id\`
 
-**Remember: For organization.created, the person and company ALREADY EXIST. Find them and update the company's org_id field ONLY if it's empty. Do NOT create anything new. Keep the first org created for each company. Once the Slack notification is sent, STOP IMMEDIATELY.**
+**Remember: For organization.created, the person and company ALREADY EXIST. Find them and update the company's org_id field ONLY if it's empty. Do NOT create anything new. Keep the first org created for each company. NO Slack notification is sent for organization.created - only user.created sends notifications.**
 `;
 
 export default createAgent(clerkWebhookPrompt);
