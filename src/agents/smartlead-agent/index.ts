@@ -28,83 +28,25 @@ If you receive an unexpected result from any step, you should immediately stop a
 You MUST fill out all parameters for each tool call.
 
 If the event_type is LEAD_CATEGORY_UPDATED, you should:
-  1. call the ATTIO_FIND_RECORD tool with input: 
+  1. call the HANDLE_LEAD_CATEGORY_UPDATED_ATTIO tool with input:
     {
-      "object_id": "people",
-      "limit": 1,
-      "attributes": {
-        "email_addresses": "<lead_data.email>"
-      }
+      "lead_data": {
+        "email": "<lead_data.email>",
+        "first_name": "<lead_data.first_name>",
+        "last_name": "<lead_data.last_name>",
+        "company_name": "<lead_data.company_name>"
+      },
+      "from_email": "<from_email>"
     }
-    1a. If the lead is not found, call the ATTIO_CREATE_RECORD tool with input:
-        {
-          "object_type": "people",
-          "values": {
-            "email_address": "<lead_data.email>",
-            "first_name": "<lead_data.first_name>",
-            "last_name": "<lead_data.last_name>",
-            "full_name": "<lead_data.first_name> <lead_data.last_name>",
-            "lead_source": "SmartLead"
-          }
-        }
-    After Step 1 (or 1a) you should have access to the person record id.
-  2. call the ATTIO_FIND_RECORD tool with input: 
-    {
-      "object_id": "companies",
-      "limit": 1,
-      "attributes": {
-        "name": "<lead_data.company_name>"
-      }
-    }
-  2a. If there is no company with that name, you must create one. Call the ATTIO_CREATE_RECORD tool with input:
-      {
-        "object_type": "companies",
-        "values": {
-          "name": "<lead_data.company_name>"
-        }
-      }
-  After Step 2 (or 2a), you should have access to the company record id.
+    This will handle all the ATTIO record creation/update logic (steps 1-3 of the original workflow).
 
-  3. call the ATTIO_FIND_RECORD tool with input:
-  {
-      "object_id": "deals",
-      "limit": 1,
-      "attributes": {
-        "associated_company": { target_record_id: "<companyRecordId>" }
-      }
-  }
-  
-  You may or may not find a deal with the current lead's company.
-    3a. If there is no deal with the current lead's company, call the ATTIO_CREATE_RECORD tool with input:
-        {
-          "object_type": "deals",
-          "values": {
-            "name": "Deal with <lead_data.company_name>",
-            "stage": "Lead",
-            "owner": "rblalock@agentuity.com",
-            "value": 0,
-            "associated_people": ["<personRecordId_1>", "<personRecordId_2>", ...],
-            "associated_company": companyRecordId,
-          }
-        }
-    You should recieve the record that you created.
-    3b. If there **is** a deal with the current lead's company, call the ATTIO_UPDATE_RECORD tool with input:
-        {
-          "object_type": "deals",
-          "record_id": "<dealRecordId> (from Step 3)",
-          "values": {
-            "associated_people": [...existingAssociatedPeople (from Step 3), personRecordId],
-          }
-        }
-      The goal is to add the person to the existing deal.
-
-  4. Call the SMARTLEAD_SET_LEAD_STATUS_POSITIVE with input:
+  2. Call the SMARTLEAD_SET_LEAD_STATUS_POSITIVE with input:
       {
         "email": "<lead_data.email>"
       }
   Once you have done this, you should not make any more tool calls and stop completely.
 
-  5. Finally, call the SLACKBOT_SENDS_A_MESSAGE_TO_A_SLACK_CHANNEL tool.
+  3. Finally, call the SLACKBOT_SENDS_A_MESSAGE_TO_A_SLACK_CHANNEL tool.
   The message should be markdown, and *exactly*:
 
   "
@@ -118,7 +60,7 @@ If the event_type is LEAD_CATEGORY_UPDATED, you should:
   - Rick Blalock: U088UL77GDV
   You must keep the ids in the format <@ID> including the "<@" and ">".
   {
-    "channel": "#yay",  
+    "channel": "#agent-test-channel-nick",  
     "text": "<message you created based on the rules above>"
   }
 
@@ -141,7 +83,7 @@ If the event_type is EMAIL_REPLY, you should:
       - Rick Blalock: U088UL77GDV
       You must keep the ids in the format <@ID> including the "<@" and ">".
       {
-        "channel": "#yay",
+        "channel": "#agent-test-channel-nick",
         "text": "<message you created based on the rules above>"
       }
     1b. If the lead status is not "positive" (including empty reply or nothing), do nothing.
@@ -153,6 +95,7 @@ const truncatePayload = (payload: any) => {
   if (payload.event_type === "LEAD_CATEGORY_UPDATED") {
     return {
       lead_data: {
+        event_type: payload.event_type,
         email: payload.lead_data.email,
         first_name: payload.lead_data.first_name,
         last_name: payload.lead_data.last_name,
@@ -162,6 +105,7 @@ const truncatePayload = (payload: any) => {
     };
   } else if (payload.event_type === "EMAIL_REPLY") {
     return {
+      event_type: payload.event_type,
       from_email: payload.from_email,
       to_email: payload.to_email,
       to_name: payload.to_name,
