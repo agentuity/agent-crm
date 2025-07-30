@@ -28,6 +28,7 @@ export const createAgent = (
     ctx: AgentContext
   ) {
     const payload = await req.data.json();
+    ctx.logger.info("Payload:", payload);
     if (
       verifyWebhook &&
       !verifyWebhook(JSON.stringify(payload), req, resp, ctx)
