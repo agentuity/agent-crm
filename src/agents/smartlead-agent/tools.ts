@@ -261,7 +261,7 @@ export const toolExecutors: Record<string, Function> = {
               values: {
                 name: `Deal with ${lead_data.company_name}`,
                 stage: "Lead",
-                owner: "nmirigliani@agentuity.com",
+                owner: "rblalock@agentuity.com",
                 value: 0,
                 associated_people: [personRecordId],
                 associated_company: companyRecordId,
