@@ -131,8 +131,14 @@ export const toolMetadataList = [
           title: "Body",
           examples: ["Hello, how are you?"],
         },
+        campaign_id: {
+          type: "string",
+          description: "The campaign ID associated with the email.",
+          title: "Campaign ID",
+          examples: ["campaign_123"],
+        },
       },
-      required: ["from_email", "to_email", "body"],
+      required: ["from_email", "to_email", "body", "campaign_id"],
       title: "KVStoreEmailRequest",
     },
     cache_control: undefined,
@@ -194,10 +200,12 @@ export const toolExecutors: Record<string, Function> = {
       from_email,
       to_email,
       body,
+      campaign_id,
     }: {
       from_email: string;
       to_email: string;
       body: string;
+      campaign_id: string;
     },
     ctx: AgentContext
   ) => {
@@ -205,7 +213,7 @@ export const toolExecutors: Record<string, Function> = {
       await ctx.kv.set(
         "emails",
         to_email,
-        { from_email, body },
+        { from_email, body, campaign_id },
         {
           ttl: 60 * 60 * 24 * 2, // 2 days
         }

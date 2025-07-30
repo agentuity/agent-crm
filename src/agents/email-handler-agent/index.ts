@@ -33,13 +33,16 @@ export default async function Agent(
         let email_data = (await dataResponse.data.json()) as {
           from_email: string;
           body: string;
+          campaign_id: string;
         };
         let from_email = email_data.from_email;
         let body = email_data.body;
+        let campaign_id = email_data.campaign_id;
         let prompt = `
         Your job is to process the following email:
         The email is from: ${to_email}
         The email is to: ${from_email}
+        The campaign ID is: ${campaign_id}
         The email body is:
         ${body}
 
@@ -52,7 +55,7 @@ export default async function Agent(
           {
             "channel": "#agent-test-channel-nick",
             "text": "📬 *Email!*
-                    <@ID>, you have a new email from <${to_email}> Check your inbox (<${from_email}>). Here is my suggestion for a reply:
+                    <@ID>, you have a new email from <${to_email}> (Campaign: ${campaign_id}). Check your inbox (<${from_email}>). Here is my suggestion for a reply:
                     [YOUR SUGGESTION EMAIL BODY HERE].
                     "
           } 
@@ -62,7 +65,7 @@ export default async function Agent(
           {
             "channel": "#agent-test-channel-nick",
             "text": "📬 *Email!*
-                    <@ID>, you have a new email from <${from_email}> and it was too hard for me to figure out with my small LLM brain. Check your inbox (<${to_email}>).
+                    <@ID>, you have a new email from <${from_email}> (Campaign: ${campaign_id}) and it was too hard for me to figure out with my small LLM brain. Check your inbox (<${to_email}>).
                     "
           }
           where ID is the user id of the person who should receive the message. You must determine this to be either Jeff Haynie, or Rick Blalock based on the ${to_email}.

@@ -111,7 +111,8 @@ If the event_type is EMAIL_REPLY, you should:
     {
       "from_email": "<from_email>",
       "to_email": "<to_email>",
-      "body": "<reply_message.html>"
+      "body": "<reply_message.html>",
+      "campaign_id": "<campaign_id>"
     }
   You should receive a success response.
 `;
