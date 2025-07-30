@@ -10,7 +10,9 @@
     "format": "biome format --write .",
     "lint": "biome lint .",
     "prestart": "agentuity bundle",
-    "start": "bun run .agentuity/index.js"
+    "start": "bun run .agentuity/index.js",
+    "backfill-users": "bun run scripts/backfill-users.ts",
+    "backfill-company-orgs": "bun run scripts/backfill-company-orgs.ts"
   },
   "keywords": [
     "agentuity",
@@ -33,8 +35,9 @@
     "@ai-sdk/groq": "^1.2.9",
     "@ai-sdk/openai": "^1.3.22",
     "@anthropic-ai/sdk": "^0.56.0",
-    "@composio/anthropic": "^0.1.35",
-    "@composio/core": "^0.1.35",
+    "@clerk/clerk-sdk-node": "^5.0.57",
+    "@composio/anthropic": "^0.1.39",
+    "@composio/core": "^0.1.39",
     "@composio/vercel": "^0.1.37",
     "ai": "^4.3.16",
     "drizzle-orm": "^0.44.2",
