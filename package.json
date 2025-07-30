@@ -11,7 +11,8 @@
     "lint": "biome lint .",
     "prestart": "agentuity bundle",
     "start": "bun run .agentuity/index.js",
-    "backfill-users": "bun run scripts/backfill-users.ts"
+    "backfill-users": "bun run scripts/backfill-users.ts",
+    "backfill-company-orgs": "bun run scripts/backfill-company-orgs.ts"
   },
   "keywords": [
     "agentuity",
