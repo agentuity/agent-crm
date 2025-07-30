@@ -21,6 +21,7 @@ If the event_type is EMAIL_REPLY, the webhook will contain the following importa
 - to_name: The name of the potential lead
 - reply_message.html: The body of the email reply
 - campaign_id: The id of the campaign that the email reply is associated with
+- stats_id: The id of the email stats that the email reply is associated with
 
 ## Workflow
 Based on the event type you should follow one of the following workflows **sequentially, with no deviation**.
@@ -112,12 +113,44 @@ If the event_type is EMAIL_REPLY, you should:
       "from_email": "<from_email>",
       "to_email": "<to_email>",
       "body": "<reply_message.html>",
-      "campaign_id": "<campaign_id>"
+      "campaign_id": "<campaign_id>",
+      "stats_id": "<stats_id>"
     }
   You should receive a success response.
 `;
 
-export default createAgent(prompt, toolMetadataList, toolExecutors);
+const truncatePayload = (payload: any) => {
+  if (payload.event_type === "LEAD_CATEGORY_UPDATED") {
+    return {
+      lead_data: {
+        email: payload.lead_data.email,
+        first_name: payload.lead_data.first_name,
+        last_name: payload.lead_data.last_name,
+        company_name: payload.lead_data.company_name,
+      },
+      from_email: payload.from_email,
+    };
+  } else if (payload.event_type === "EMAIL_REPLY") {
+    return {
+      from_email: payload.from_email,
+      to_email: payload.to_email,
+      to_name: payload.to_name,
+      reply_message: {
+        html: payload.reply_message.html,
+      },
+      campaign_id: payload.campaign_id,
+      stats_id: payload.stats_id,
+    };
+  }
+};
+export default createAgent(
+  prompt,
+  toolMetadataList,
+  toolExecutors,
+  "claude-3-7-sonnet-20250219",
+  undefined,
+  truncatePayload
+);
 
 // 6. Finally, call the SLACKBOT_SENDS_A_MESSAGE_TO_A_SLACK_CHANNEL tool.
 //   The message should be markdown, and *exactly*:

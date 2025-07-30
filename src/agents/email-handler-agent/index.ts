@@ -2,6 +2,7 @@ import type { AgentContext, AgentRequest, AgentResponse } from "@agentuity/sdk";
 import { Composio } from "@composio/core";
 import { AnthropicProvider } from "@composio/anthropic";
 import { Anthropic } from "@anthropic-ai/sdk";
+import { toolMetadataList, toolExecutors } from "./tools";
 
 const client = new Anthropic();
 
@@ -21,8 +22,8 @@ export default async function Agent(
   });
 
   // Define any custom tools here if needed
-  const extraTools: any[] = [];
-  const customToolExecutors: Record<string, Function> = {};
+  const extraTools: any[] = toolMetadataList;
+  const customToolExecutors: Record<string, Function> = toolExecutors;
 
   let dataResponse = await ctx.kv.get("positive_leads", "emails");
   if (dataResponse.exists) {
@@ -34,10 +35,12 @@ export default async function Agent(
           from_email: string;
           body: string;
           campaign_id: string;
+          stats_id: string;
         };
         let from_email = email_data.from_email;
         let body = email_data.body;
         let campaign_id = email_data.campaign_id;
+        let stats_id = email_data.stats_id;
         let prompt = `
         Your job is to process the following email:
         The email is from: ${to_email}
@@ -51,13 +54,12 @@ export default async function Agent(
           - If the email asks for a meeting, you should send this calendar link: https://cal.com/agentuity/30min
           - If the email asks about a website, you should send this link: https://agentuity.com
           - Please follow these steps to place your reply in Slack:
-          CALL THE SLACKBOT_SENDS_A_MESSAGE_TO_A_SLACK_CHANNEL tool with the following input:
+          Call the SMARTLEAD_SEND_EMAIL_REPLY tool with the following input:
           {
-            "channel": "#agent-test-channel-nick",
-            "text": "📬 *Email!*
-                    <@ID>, you have a new email from <${to_email}> (Campaign: ${campaign_id}). Check your inbox (<${from_email}>). Here is my suggestion for a reply:
-                    [YOUR SUGGESTION EMAIL BODY HERE].
-                    "
+            "campaign_id": "${campaign_id}",
+            "email": "${to_email}",
+            "email_body": "[YOUR SUGGESTION EMAIL BODY HERE]",
+            "stats_id": "${stats_id}"
           } 
 
         - ELSE, if the email is complex, you should perform the following steps:

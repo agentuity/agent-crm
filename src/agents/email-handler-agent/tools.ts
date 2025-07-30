@@ -22,18 +22,58 @@ async function callSmartLeadAPI(
     },
   };
 
+  console.log("Full URL:", fullUrl);
+  console.log("Body:", body);
   if (body) {
     options.body = JSON.stringify(body);
   }
 
   const response = await fetch(fullUrl, options);
+
+  // Log response details for debugging
+  console.log("Response status:", response.status);
+  console.log(
+    "Response headers:",
+    Object.fromEntries(response.headers.entries())
+  );
+
   if (!response.ok) {
-    throw new Error(
-      `SmartLead API call failed: ${response.status} ${response.statusText}`
-    );
+    // Try to get error details from response
+    let errorMessage = `SmartLead API call failed: ${response.status} ${response.statusText}`;
+    try {
+      const errorText = await response.text();
+      console.log("Error response body:", errorText);
+      errorMessage += ` - Response: ${errorText}`;
+    } catch (e) {
+      console.log("Could not read error response body");
+    }
+    throw new Error(errorMessage);
   }
 
-  return response.json();
+  // Handle response - SmartLead API returns HTML responses for success
+  const contentType = response.headers.get("content-type");
+  const responseText = await response.text();
+
+  if (contentType && contentType.includes("application/json")) {
+    try {
+      return JSON.parse(responseText);
+    } catch (error) {
+      console.log("Failed to parse JSON response:", responseText);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      throw new Error(
+        `Failed to parse JSON response: ${errorMessage}. Response: ${responseText}`
+      );
+    }
+  } else {
+    // SmartLead API returns HTML responses for success
+    console.log("Received HTML response:", responseText);
+    return {
+      success: true,
+      message: responseText,
+      contentType: contentType,
+    };
+  }
 }
 
 // Tool metadata
@@ -41,7 +81,7 @@ export const toolMetadataList = [
   {
     name: "SMARTLEAD_SEND_EMAIL_REPLY",
     description:
-      "Send an email reply through SmartLead by getting lead information, email stats, and message history, then sending the reply.",
+      "Send an email reply through SmartLead by email stats and campaign ID.",
     input_schema: {
       type: "object",
       properties: {
@@ -63,8 +103,14 @@ export const toolMetadataList = [
           title: "Email Body",
           examples: ["Thank you for your interest! I'd be happy to help."],
         },
+        stats_id: {
+          type: "string",
+          description: "The stats ID of the email to reply to.",
+          title: "Stats ID",
+          examples: ["stats_123"],
+        },
       },
-      required: ["campaign_id", "email", "email_body"],
+      required: ["campaign_id", "email", "email_body", "stats_id"],
       title: "SmartLeadSendEmailReplyRequest",
     },
     cache_control: undefined,
@@ -78,65 +124,23 @@ export const toolExecutors: Record<string, Function> = {
       campaign_id,
       email,
       email_body,
+      stats_id,
     }: {
       campaign_id: string;
       email: string;
       email_body: string;
+      stats_id: string;
     },
     ctx: AgentContext
   ) => {
     try {
       ctx.logger.info(
-        "Starting SmartLead email reply workflow for campaign: %s, email: %s",
+        "Starting SmartLead email reply workflow for campaign: %s, email: %s, stats_id: %s",
         campaign_id,
-        email
+        email,
+        stats_id
       );
 
-      // Step 1: Get lead_id by email address
-      ctx.logger.info("Step 1: Getting lead_id for email: %s", email);
-      const leadResponse = await callSmartLeadAPI(
-        `https://server.smartlead.ai/api/v1/leads/?email=${encodeURIComponent(
-          email.trim()
-        )}`
-      );
-
-      if (!leadResponse || !leadResponse.id) {
-        throw new Error(`Lead not found for email: ${email}`);
-      }
-
-      const lead_id = leadResponse.id;
-      ctx.logger.info("Found lead_id: %s", lead_id);
-
-      // Step 2: Get message history to find the message to reply to and get email_stats_id
-      ctx.logger.info(
-        "Step 2: Getting message history for lead: %s, campaign: %s",
-        lead_id,
-        campaign_id
-      );
-      const messageHistoryResponse = await callSmartLeadAPI(
-        `https://server.smartlead.ai/api/v1/campaigns/${campaign_id}/leads/${lead_id}/message-history`
-      );
-
-      if (
-        !messageHistoryResponse ||
-        !messageHistoryResponse.history ||
-        !Array.isArray(messageHistoryResponse.history)
-      ) {
-        throw new Error(
-          `No message history found for lead: ${lead_id} in campaign: ${campaign_id}`
-        );
-      }
-
-      // Get the most recent message to reply to (last in the array)
-      const latestMessage =
-        messageHistoryResponse.history[
-          messageHistoryResponse.history.length - 1
-        ];
-      const { stats_id } = latestMessage;
-
-      ctx.logger.info("Found message to reply to - Stats ID: %s", stats_id);
-
-      // Step 3: Send the reply
       ctx.logger.info("Step 4: Sending email reply");
       const replyPayload = {
         email_stats_id: stats_id,
@@ -153,7 +157,6 @@ export const toolExecutors: Record<string, Function> = {
 
       return {
         success: true,
-        lead_id,
         email_stats_id: stats_id,
         message: "Email reply sent successfully",
         response: replyResponse,
