@@ -35,8 +35,7 @@ If the event_type is LEAD_CATEGORY_UPDATED, you should:
         "first_name": "<lead_data.first_name>",
         "last_name": "<lead_data.last_name>",
         "company_name": "<lead_data.company_name>"
-      },
-      "from_email": "<from_email>"
+      }
     }
     This will handle all the ATTIO record creation/update logic (steps 1-3 of the original workflow).
 

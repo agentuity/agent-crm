@@ -146,7 +146,6 @@ export const toolExecutors: Record<string, Function> = {
 
   HANDLE_LEAD_CATEGORY_UPDATED_ATTIO: async ({
     lead_data,
-    from_email,
   }: {
     lead_data: {
       email: string;
@@ -154,119 +153,160 @@ export const toolExecutors: Record<string, Function> = {
       last_name: string;
       company_name: string;
     };
-    from_email: string;
   }) => {
-    // Step 1: Find or create person record
-    const search = await composio.tools.execute("ATTIO_FIND_RECORD", {
-      userId: "default",
-      arguments: {
-        object_id: "people",
-        attributes: { email_addresses: lead_data.email },
-        limit: 1,
-      },
-    });
-    console.log("search:", search);
+    try {
+      // Step 1: Find or create person record
+      const search = await composio.tools.execute("ATTIO_FIND_RECORD", {
+        userId: "default",
+        arguments: {
+          object_id: "people",
+          attributes: { email_addresses: lead_data.email },
+          limit: 1,
+        },
+      });
+      console.log("search:", search);
 
-    // Extract record_id from the search result
-    let personRecordId =
-      (search.data as any)?.records?.[0]?.id?.record_id || null;
-    console.log("personRecordId:", personRecordId);
+      // Extract record_id from the search result
+      let personRecordId =
+        (search.data as any)?.records?.[0]?.id?.record_id || null;
+      console.log("personRecordId:", personRecordId);
 
-    if (personRecordId === null) {
-      // Person not found, create new record
-      const personCreateResult = await composio.tools.execute(
-        "ATTIO_CREATE_RECORD",
-        {
-          userId: "default",
-          arguments: {
-            object_type: "people",
-            values: {
-              email_address: lead_data.email,
-              first_name: lead_data.first_name,
-              last_name: lead_data.last_name,
-              // full_name: `${lead_data.first_name} ${lead_data.last_name}`,
-              lead_source: "SmartLead",
+      if (personRecordId === null) {
+        // Person not found, create new record
+        const personCreateResult = await composio.tools.execute(
+          "ATTIO_CREATE_RECORD",
+          {
+            userId: "default",
+            arguments: {
+              object_type: "people",
+              values: {
+                email_addresses: [
+                  {
+                    email_address: lead_data.email,
+                  },
+                ],
+                name: {
+                  first_name: lead_data.first_name,
+                  last_name: lead_data.last_name,
+                  full_name: `${lead_data.first_name} ${lead_data.last_name}`,
+                },
+                lead_source: "SmartLead",
+              },
             },
+          }
+        );
+        console.log("personCreateResult:", personCreateResult);
+        personRecordId =
+          (personCreateResult.data as any)?.id?.record_id || null;
+        console.log("personRecordId:", personRecordId);
+      }
+
+      // Step 2: Find or create company record
+      const companySearch = await composio.tools.execute("ATTIO_FIND_RECORD", {
+        userId: "default",
+        arguments: {
+          object_id: "companies",
+          attributes: { name: lead_data.company_name },
+          limit: 1,
+        },
+      });
+      console.log("companySearch:", companySearch);
+
+      let companyRecordId =
+        (companySearch.data as any)?.records?.[0]?.id?.record_id || null;
+      console.log("companyRecordId:", companyRecordId);
+
+      if (companyRecordId === null) {
+        // Company not found, create new record
+        const companyCreateResult = await composio.tools.execute(
+          "ATTIO_CREATE_RECORD",
+          {
+            userId: "default",
+            arguments: {
+              object_type: "companies",
+              values: { name: lead_data.company_name },
+            },
+          }
+        );
+        console.log("companyCreateResult:", companyCreateResult);
+        companyRecordId =
+          (companyCreateResult.data as any)?.id?.record_id || null;
+        console.log("companyRecordId:", companyRecordId);
+      }
+
+      // Step 3: Find and update or create deal record
+      const dealSearch = await composio.tools.execute("ATTIO_FIND_RECORD", {
+        userId: "default",
+        arguments: {
+          object_id: "deals",
+          attributes: {
+            associated_company: { target_record_id: companyRecordId },
           },
-        }
-      );
-      console.log("personCreateResult:", personCreateResult);
-      return 0;
+          limit: 1,
+        },
+      });
+      console.log("dealSearch:", dealSearch);
+      let dealRecordId =
+        (dealSearch.data as any)?.records?.[0]?.id?.record_id || null;
+      console.log("dealRecordId:", dealRecordId);
+
+      if (dealRecordId === null) {
+        // Deal not found, create new record
+        const dealCreateResult = await composio.tools.execute(
+          "ATTIO_CREATE_RECORD",
+          {
+            userId: "default",
+            arguments: {
+              object_type: "deals",
+              values: {
+                name: `Deal with ${lead_data.company_name}`,
+                stage: "Lead",
+                owner: "nmirigliani@agentuity.com",
+                value: 0,
+                associated_people: [personRecordId],
+                associated_company: companyRecordId,
+              },
+            },
+          }
+        );
+        console.log("dealCreateResult:", dealCreateResult);
+        dealRecordId = (dealCreateResult.data as any)?.id?.record_id || null;
+        console.log("dealRecordId:", dealRecordId);
+      } else {
+        // Deal exists, update with new person
+        // Get existing associated people
+        const existingDeal = (dealSearch.data as any)?.records?.[0];
+        const existingAssociatedPeople = (existingDeal?.associated_people ||
+          []) as any[];
+        const existingPersonIds = existingAssociatedPeople.map(
+          (person: any) => person.target_record_id
+        );
+        // Update deal with new person
+        const dealUpdateResult = await composio.tools.execute(
+          "ATTIO_UPDATE_RECORD",
+          {
+            userId: "default",
+            arguments: {
+              object_type: "deals",
+              record_id: dealRecordId,
+              values: {
+                associated_people: [...existingPersonIds, personRecordId],
+              },
+            },
+          }
+        );
+        console.log("dealUpdateResult:", dealUpdateResult);
+      }
+
+      return {
+        success: true,
+        message: "ATTIO records created/updated successfully",
+        personRecordId,
+        companyRecordId,
+        dealRecordId,
+      };
+    } catch (error) {
+      console.error("Error in HANDLE_LEAD_CATEGORY_UPDATED_ATTIO:", error);
     }
-
-    // Step 2: Find or create company record
-    // TODO: Call ATTIO_FIND_RECORD with:
-    // {
-    //   object_id: "companies",
-    //   limit: 1,
-    //   attributes: {
-    //     name: lead_data.company_name,
-    //   },
-    // }
-    const companyFindResult = null as any[] | null; // TODO: Replace with actual tool call result
-
-    let companyRecordId: string;
-    if (!companyFindResult || companyFindResult.length === 0) {
-      // Company not found, create new record
-      // TODO: Call ATTIO_CREATE_RECORD with:
-      // {
-      //   object_type: "companies",
-      //   values: {
-      //     name: lead_data.company_name,
-      //   },
-      // }
-      const companyCreateResult = { id: "temp-company-id" } as { id: string }; // TODO: Replace with actual tool call result
-      companyRecordId = companyCreateResult.id;
-    } else {
-      companyRecordId = companyFindResult[0].id;
-    }
-
-    // Step 3: Find or create deal record
-    // TODO: Call ATTIO_FIND_RECORD with:
-    // {
-    //   object_id: "deals",
-    //   limit: 1,
-    //   attributes: {
-    //     associated_company: { target_record_id: companyRecordId },
-    //   },
-    // }
-    const dealFindResult = null as any[] | null; // TODO: Replace with actual tool call result
-
-    if (!dealFindResult || dealFindResult.length === 0) {
-      // Deal not found, create new record
-      // TODO: Call ATTIO_CREATE_RECORD with:
-      // {
-      //   object_type: "deals",
-      //   values: {
-      //     name: `Deal with ${lead_data.company_name}`,
-      //     stage: "Lead",
-      //     owner: "nmirigliani@agentuity.com",
-      //     value: 0,
-      //     associated_people: [personRecordId],
-      //     associated_company: companyRecordId,
-      //   },
-      // }
-      const dealCreateResult = { id: "temp-deal-id" } as { id: string }; // TODO: Replace with actual tool call result
-    } else {
-      // Deal exists, update with new person
-      const existingDeal = dealFindResult[0] as any;
-      const existingAssociatedPeople = (existingDeal.associated_people ||
-        []) as string[];
-      // TODO: Call ATTIO_UPDATE_RECORD with:
-      // {
-      //   object_type: "deals",
-      //   record_id: existingDeal.id,
-      //   values: {
-      //     associated_people: [...existingAssociatedPeople, personRecordId],
-      //   },
-      // }
-    }
-
-    return {
-      success: true,
-      message: "ATTIO records created/updated successfully",
-      personRecordId,
-      companyRecordId,
-    };
   },
 };
