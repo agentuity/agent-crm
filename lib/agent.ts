@@ -20,14 +20,15 @@ export const createAgent = (
     req: AgentRequest,
     resp: AgentResponse,
     ctx: AgentContext
-  ) => Promise<boolean>
+  ) => Promise<boolean>,
+  truncatePayload?: (payload: any) => any
 ) => {
   return async function Agent(
     req: AgentRequest,
     resp: AgentResponse,
     ctx: AgentContext
   ) {
-    const payload = await req.data.json();
+    let payload = await req.data.json();
     ctx.logger.info("Payload:", payload);
     if (
       verifyWebhook &&
@@ -38,6 +39,10 @@ export const createAgent = (
         error: "Webhook verification failed.",
       });
     }
+
+    // Truncate the payload if a truncatePayload function is provided
+    payload = truncatePayload ? truncatePayload(payload) : payload;
+    ctx.logger.info("Truncated Payload:", payload);
 
     const userId = "default";
 

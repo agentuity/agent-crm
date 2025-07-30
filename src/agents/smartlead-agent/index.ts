@@ -149,4 +149,35 @@ If the event_type is EMAIL_REPLY, you should:
   After Step 1, you should have sent a message to the appropriate person. Once you have done this, you should stop.
 `;
 
-export default createAgent(prompt, toolMetadataList, toolExecutors);
+const truncatePayload = (payload: any) => {
+  if (payload.event_type === "LEAD_CATEGORY_UPDATED") {
+    return {
+      lead_data: {
+        email: payload.lead_data.email,
+        first_name: payload.lead_data.first_name,
+        last_name: payload.lead_data.last_name,
+        company_name: payload.lead_data.company_name,
+      },
+      from_email: payload.from_email,
+    };
+  } else if (payload.event_type === "EMAIL_REPLY") {
+    return {
+      from_email: payload.from_email,
+      to_email: payload.to_email,
+      to_name: payload.to_name,
+      reply_message: {
+        html: payload.reply_message.html,
+      },
+      campaign_id: payload.campaign_id,
+      stats_id: payload.stats_id,
+    };
+  }
+};
+export default createAgent(
+  prompt,
+  toolMetadataList,
+  toolExecutors,
+  "claude-3-7-sonnet-20250219",
+  undefined,
+  truncatePayload
+);
