@@ -14,11 +14,11 @@ export default async function Agent(
     apiKey: process.env.COMPOSIO_API_KEY,
   });
 
-  let dataResponse = await ctx.kv.get("positive_leads", "emails");
+  let dataResponse = await ctx.kv.get("agent-crm-positive-leads", "emails");
   if (dataResponse.exists) {
     let positive_emails = (await dataResponse.data.json()) as any[];
     for (let to_email of positive_emails) {
-      dataResponse = await ctx.kv.get("emails", to_email);
+      dataResponse = await ctx.kv.get("agent-crm-emails", to_email);
       if (dataResponse.exists) {
         let email_data = (await dataResponse.data.json()) as {
           from_email: string;
@@ -133,15 +133,22 @@ export default async function Agent(
           }
         }
 
-        let archive_emails = await ctx.kv.get("positive_leads", "archive");
+        let archive_emails = await ctx.kv.get(
+          "agent-crm-positive-leads",
+          "archive"
+        );
         if (archive_emails.exists) {
           let archive_emails_data = (await archive_emails.data.json()) as any[];
           if (!archive_emails_data.includes(to_email)) {
             archive_emails_data.push(to_email);
-            await ctx.kv.set("positive_leads", "archive", archive_emails_data);
+            await ctx.kv.set(
+              "agent-crm-positive-leads",
+              "archive",
+              archive_emails_data
+            );
           }
         } else {
-          await ctx.kv.set("positive_leads", "archive", [to_email]);
+          await ctx.kv.set("agent-crm-positive-leads", "archive", [to_email]);
         }
       }
     }
@@ -152,7 +159,7 @@ export default async function Agent(
     // while we're in the middle of processing, they will be missed.
     // Feel that odds of that are very slim, but still a risk.
 
-    await ctx.kv.set("positive_leads", "emails", []);
+    await ctx.kv.set("agent-crm-positive-leads", "emails", []);
 
     ctx.logger.info(
       `Finished processing positive emails. ${positive_emails.length} emails processed.`

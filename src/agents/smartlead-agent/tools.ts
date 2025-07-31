@@ -141,7 +141,7 @@ export const toolExecutors: Record<string, Function> = {
   ) => {
     try {
       await ctx.kv.set(
-        "emails",
+        "agent-crm-emails",
         to_email,
         { from_email, body, campaign_id, stats_id },
         {
@@ -161,16 +161,16 @@ export const toolExecutors: Record<string, Function> = {
     ctx: AgentContext
   ) => {
     try {
-      let dataResponse = await ctx.kv.get("positive_leads", "emails");
+      let dataResponse = await ctx.kv.get("agent-crm-positive-leads", "emails");
       if (dataResponse.exists) {
         let data = (await dataResponse.data.json()) as any[];
         // Ensure no duplicates
         if (!data.includes(email)) {
           data.push(email);
-          await ctx.kv.set("positive_leads", "emails", data);
+          await ctx.kv.set("agent-crm-positive-leads", "emails", data);
         }
       } else {
-        await ctx.kv.set("positive_leads", "emails", [email]);
+        await ctx.kv.set("agent-crm-positive-leads", "emails", [email]);
       }
       return { success: true };
     } catch (error) {
@@ -180,7 +180,10 @@ export const toolExecutors: Record<string, Function> = {
   },
 
   KV_CHECK_ARCHIVE: async ({ email }: { email: string }, ctx: AgentContext) => {
-    let archive_emails = await ctx.kv.get("positive_leads", "archive");
+    let archive_emails = await ctx.kv.get(
+      "agent-crm-positive-leads",
+      "archive"
+    );
     if (archive_emails.exists) {
       let archive_emails_data = (await archive_emails.data.json()) as any[];
       return archive_emails_data.includes(email);
