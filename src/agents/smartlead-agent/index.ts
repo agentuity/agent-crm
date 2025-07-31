@@ -40,12 +40,7 @@ If the event_type is LEAD_CATEGORY_UPDATED, you should:
       }
     }
 
-  2. Call the SMARTLEAD_SET_LEAD_STATUS_POSITIVE with input:
-      {
-        "email": "<lead_data.email>"
-      }
-
-  3. Finally, call the KV_STORE_POSITIVE_LEAD tool with input:
+  2. Finally, call the KV_STORE_POSITIVE_LEAD tool with input:
     {
       "email": "<lead_data.email>"
     }
@@ -66,8 +61,8 @@ If the event_type is EMAIL_REPLY, you should:
 const truncatePayload = (payload: any) => {
   if (payload.event_type === "LEAD_CATEGORY_UPDATED") {
     return {
+      event_type: payload.event_type,
       lead_data: {
-        event_type: payload.event_type,
         email: payload.lead_data.email,
         first_name: payload.lead_data.first_name,
         last_name: payload.lead_data.last_name,

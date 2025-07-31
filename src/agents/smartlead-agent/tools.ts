@@ -146,8 +146,11 @@ export const toolExecutors: Record<string, Function> = {
       let dataResponse = await ctx.kv.get("positive_leads", "emails");
       if (dataResponse.exists) {
         let data = (await dataResponse.data.json()) as any[];
-        data.push(email);
-        await ctx.kv.set("positive_leads", "emails", data);
+        // Ensure no duplicates
+        if (!data.includes(email)) {
+          data.push(email);
+          await ctx.kv.set("positive_leads", "emails", data);
+        }
       } else {
         await ctx.kv.set("positive_leads", "emails", [email]);
       }
