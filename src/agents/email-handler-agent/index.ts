@@ -49,12 +49,18 @@ export default async function Agent(
         The email body is:
         ${body}
 
+        The email is from a lead, and the lead is interested in our services.
+        
+        THIS IS WHAT YOU KNOW, AND ONLY KNOW - ONLY USE THIS INFORMATION TO DETERMINE WHAT TO REPLY WITH:
+        - The calendar link can be determined from the email: ${from_email}.
+        - If the email is from Jeff Haynie, the calendar link is: https://cal.com/jeffhaynie/15min?members=1
+        - If the email is from Rick Blalock, the calendar link is: https://cal.com/rblalock/15min?members=1
+        - Pricing can be found at this link: https://agentuity.com/pricing
+        - The docs website is found at this link: https://agentuity.dev/Introduction
+        
+
         You should operate under these rules:
-        - NOTE: WE ARE IN TESTING MODE, YOU SHOULD ASSUME ALL EMAILS ARE COMPLEX, NOT SIMPLE.
-        - If the email is simple, you must draft a reply.
-          - If the email asks for a meeting, you should send this calendar link: https://cal.com/agentuity/30min
-          - If the email asks about a website, you should send this link: https://agentuity.com
-          - Please follow these steps to place your reply in Slack:
+        - If you can respond to all information requests in the email, you must draft a reply.
           Call the SMARTLEAD_SEND_EMAIL_REPLY tool with the following input:
           {
             "campaign_id": "${campaign_id}",
@@ -63,7 +69,7 @@ export default async function Agent(
             "stats_id": "${stats_id}"
           } 
 
-        - ELSE, if the email is complex, you should perform the following steps:
+        - ELSE, is there are any requests for information that you cannot respond to, you should perform the following steps:
           Call the SLACKBOT_SENDS_A_MESSAGE_TO_A_SLACK_CHANNEL tool with the following input:
           {
             "channel": "#agent-test-channel-nick",
