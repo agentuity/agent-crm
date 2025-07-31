@@ -1,8 +1,7 @@
 import type { AgentContext, AgentRequest, AgentResponse } from "@agentuity/sdk";
 import { Composio } from "@composio/core";
-import { AnthropicProvider } from "@composio/anthropic";
 import { Anthropic } from "@anthropic-ai/sdk";
-import { toolMetadataList, toolExecutors } from "./tools";
+import { toolExecutors } from "./tools";
 
 const client = new Anthropic();
 
@@ -13,17 +12,7 @@ export default async function Agent(
 ) {
   const composio = new Composio({
     apiKey: process.env.COMPOSIO_API_KEY,
-    provider: new AnthropicProvider(),
   });
-  const userId = "default";
-
-  const tools = await composio.tools.get(userId, {
-    tools: ["SLACKBOT_SENDS_A_MESSAGE_TO_A_SLACK_CHANNEL"],
-  });
-
-  // Define any custom tools here if needed
-  const extraTools: any[] = toolMetadataList;
-  const customToolExecutors: Record<string, Function> = toolExecutors;
 
   let dataResponse = await ctx.kv.get("positive_leads", "emails");
   if (dataResponse.exists) {
@@ -42,180 +31,118 @@ export default async function Agent(
         let campaign_id = email_data.campaign_id;
         let stats_id = email_data.stats_id;
         let prompt = `
-        Your job is to process the following email:
-        The email is from: ${to_email}
-        The email is to: ${from_email}
-        The campaign ID is: ${campaign_id}
-        The email body is:
-        ${body}
+          # Task
 
-        The email is from a lead, and the lead is interested in our services.
-        
-        THIS IS WHAT YOU KNOW, AND ONLY KNOW - ONLY USE THIS INFORMATION TO DETERMINE WHAT TO REPLY WITH:
-        - The calendar link can be determined from the email: ${from_email}.
-        - If the email is from Jeff Haynie, the calendar link is: https://cal.com/jeffhaynie/15min?members=1
-        - If the email is from Rick Blalock, the calendar link is: https://cal.com/rblalock/15min?members=1
-        - Pricing can be found at this link: https://agentuity.com/pricing
-        - The docs website is found at this link: https://agentuity.dev/Introduction
-        
+          The email is from a lead, and the lead is interested in our services. Your job is to suggest a reply to this email that came from the lead, but if the response is outside of your skills as defined below, we will have a human respond instead of you. In that case, you do NOT NEED TO GENERATE A REPLY. You are writing on behalf of ${from_email}, so reply as if you are them.
 
-        You should operate under these rules:
-        - If you can respond to all information requests in the email, you must draft a reply.
-          Call the SMARTLEAD_SEND_EMAIL_REPLY tool with the following input:
-          {
-            "campaign_id": "${campaign_id}",
-            "email": "${to_email}",
-            "email_body": "[YOUR SUGGESTION EMAIL BODY HERE]",
-            "stats_id": "${stats_id}"
-          } 
+          # Tone & Voice
 
-        - ELSE, is there are any requests for information that you cannot respond to, you should perform the following steps:
-          Call the SLACKBOT_SENDS_A_MESSAGE_TO_A_SLACK_CHANNEL tool with the following input:
-          {
-            "channel": "#agent-test-channel-nick",
-            "text": "📬 *Email!*
-                    <@ID>, you have a new email from <${to_email}> (Campaign: ${campaign_id}) and it was too hard for me to figure out with my small LLM brain. Check your inbox (<${from_email}>).
-                    "
-          }
-          where ID is the user id of the person who should receive the message. You must determine this to be either Jeff Haynie, or Rick Blalock based on the ${from_email}.
-          The ids are:
-          - Jeff Haynie: U08993W8V0T
-          - Rick Blalock: U088UL77GDV
-          You must keep the ids in the format <@ID> including the "<@" and ">".
+          - Your response should sound like internal communication, not marketing and not straight-arrowed or overly professional
+          - No corporate jargon, buzzwords, etc
+          - Be personable like you're talking to a friend; be genuine
+          - Don't overcomplicate the response with unnecessary sentences
+          
+          # Known Facts
 
+          You know the following information, and only this information:
+
+          1. The calendar link for setting up a meeting can be determined from the email: ${from_email}
+            - If the email is to Jeff Haynie, his calendar link is: https://cal.com/jeffhaynie/15min
+            - If the email is to Rick Blalock, his calendar link is: https://cal.com/rblalock/15min
+          2. You do not know anyone's availability, but you know that you can send a calendar link if someone wants to book a meeting. If someone suggests a specific date/time, just brush that off and respond with something like "You can find a time on my calendar here: [LINK]". Do not reference the fact that they asked about a specific time slot.
+          2. Pricing can be found at this link: https://agentuity.com/pricing
+          3. The docs website is found at this link: https://agentuity.dev/Introduction
+          4. We are open to talking about different *open-ended* topics, in the event of an open-ended request (i.e. about partnership), you *must* treat it the same as a meeting request and have the lead schedule with a calendar link. Do not sugguest anything other than openness to talk.
+          5. You do not know specific technical facts about the company or internal affairs.
+          
+          # Workflow
+
+          1. First, determine all of the questions the lead is asking (if any).
+          2. Determine if each of the questions can be answered using your Known Facts.
+          3. If you determine that all questions can be answered, generate a reply to the lead. 
+          4. If you cannot answer _every_ question, output 'INVALID'.
+          
+          # Input
+
+          The email is from: ${to_email}
+          The email is to: ${from_email}
+          The email body is:
+          ${body}
+
+          # Output
+
+          You should output with one of two things EXACTLY:
+          1. Email body including greeting and signature - no reasoning, just the body.
+          2. 'INVALID' - the string literal with no other reasoning or text.
         `;
+
         let response = await client.messages.create({
           model: "claude-3-7-sonnet-20250219",
           messages: [{ role: "user", content: prompt }],
-          tools: [...tools, ...extraTools],
           max_tokens: 1000,
           stream: false,
         });
 
-        // Extract tool calls from the response
-        const toolCalls = response.content.filter(
-          (block) => block.type === "tool_use"
-        );
+        let text: string = "";
+        if (response.content[0]?.type === "text") {
+          text = response.content[0].text;
+        }
 
-        // If there are tool calls, execute them
-        if (toolCalls.length > 0) {
-          ctx.logger.info("Executing tool calls:", toolCalls);
-
-          const customToolNames = new Set(extraTools.map((tool) => tool.name));
-
-          const customToolCalls = toolCalls.filter((call: any) =>
-            customToolNames.has(call.name)
-          );
-          const composioToolCalls = toolCalls.filter(
-            (call: any) => !customToolNames.has(call.name)
-          );
-
-          let toolCallResult: any = {};
-
-          // Execute custom tools
-          if (customToolCalls.length > 0) {
-            ctx.logger.info("Executing custom tools:", customToolCalls);
-            const customResults: any[] = [];
-
-            for (const toolCall of customToolCalls) {
-              const executor = customToolExecutors[toolCall.name];
-              if (executor) {
-                try {
-                  const result = await executor(toolCall.input, ctx);
-                  customResults.push({
-                    tool_call_id: toolCall.id,
-                    type: "tool_result",
-                    content: JSON.stringify(result),
-                  });
-                } catch (error) {
-                  customResults.push({
-                    tool_call_id: toolCall.id,
-                    type: "tool_result",
-                    content: `Error: ${
-                      error instanceof Error ? error.message : "Unknown error"
-                    }`,
-                  });
-                }
-              } else {
-                customResults.push({
-                  tool_call_id: toolCall.id,
-                  type: "tool_result",
-                  content: `Error: No executor found for tool ${toolCall.name}`,
-                });
-              }
-            }
-
-            // If there are no composio tools, return the custom results - otherwise, merge them later
-            if (composioToolCalls.length === 0) {
-              toolCallResult = customResults;
-            } else {
-              toolCallResult.customResults = customResults;
-            }
+        if (text === "INVALID") {
+          // Ping someone in slack.
+          let userId = "";
+          const fromEmailLower = from_email.toLowerCase();
+          if (
+            fromEmailLower.includes("rick") ||
+            fromEmailLower.includes("blalock")
+          ) {
+            userId = "U088UL77GDV"; // Rick Blalock
+          } else if (
+            fromEmailLower.includes("jeff") ||
+            fromEmailLower.includes("haynie")
+          ) {
+            userId = "U08993W8V0T"; // Jeff Haynie
           }
-
-          // Execute composio tools if any
-          if (composioToolCalls.length > 0) {
-            ctx.logger.info("Executing composio tools:", composioToolCalls);
-
-            // Create a response-like object with only composio tool calls
-            const composioResponse = {
-              ...response,
-              content: response.content
-                .map((block: any) => {
-                  if (
-                    block.type === "tool_use" &&
-                    composioToolCalls.some((call: any) => call.id === block.id)
-                  ) {
-                    return block;
-                  }
-                  return block.type === "tool_use" ? null : block;
-                })
-                .filter(Boolean),
-            };
-
-            const composioResult = await composio.provider.handleToolCalls(
-              userId,
-              composioResponse
-            );
-
-            if (customToolCalls.length === 0) {
-              // Only composio tools
-              toolCallResult = composioResult;
-            } else {
-              // Both custom and composio tools, merge results
-              toolCallResult = {
-                ...composioResult,
-                customResults: toolCallResult.customResults,
-              };
+          const pingResult = await composio.tools.execute(
+            "SLACKBOT_SENDS_A_MESSAGE_TO_A_SLACK_CHANNEL",
+            {
+              userId: "default",
+              arguments: {
+                channel: "#agent-test-channel-nick",
+                text: `📬 *Email!*
+                    <@${userId}>, you have a new reply from ${to_email} and my small LLM brain couldn't figure out a response. Check your inbox (${to_email}).
+                    `,
+              },
             }
-          }
-
-          ctx.logger.info("Tool execution completed:", toolCallResult);
+          );
         } else {
-          // Handle text response if no tool calls
-          ctx.logger.info("No tool calls detected, finishing up.");
-          const textBlock = response.content.find(
-            (block) => block.type === "text"
-          );
-          if (textBlock) {
-            ctx.logger.info("Received text response:", textBlock.text);
-            return resp.text(textBlock.text);
-          } else {
-            ctx.logger.info("No text response detected");
-            return resp.text("No response");
+          // Send a reply via smartlead API.
+          // Get the tool executor with name SMARTLEAD_SEND_EMAIL_REPLY
+          const smartleadSendEmailReplyExecutor =
+            toolExecutors["SMARTLEAD_SEND_EMAIL_REPLY"];
+          if (smartleadSendEmailReplyExecutor) {
+            await smartleadSendEmailReplyExecutor(
+              {
+                campaign_id,
+                email: to_email,
+                email_body: text,
+                stats_id,
+              },
+              ctx
+            );
           }
         }
-      }
 
-      let archive_emails = await ctx.kv.get("positive_leads", "archive");
-      if (archive_emails.exists) {
-        let archive_emails_data = (await archive_emails.data.json()) as any[];
-        if (!archive_emails_data.includes(to_email)) {
-          archive_emails_data.push(to_email);
-          await ctx.kv.set("positive_leads", "archive", archive_emails_data);
+        let archive_emails = await ctx.kv.get("positive_leads", "archive");
+        if (archive_emails.exists) {
+          let archive_emails_data = (await archive_emails.data.json()) as any[];
+          if (!archive_emails_data.includes(to_email)) {
+            archive_emails_data.push(to_email);
+            await ctx.kv.set("positive_leads", "archive", archive_emails_data);
+          }
+        } else {
+          await ctx.kv.set("positive_leads", "archive", [to_email]);
         }
-      } else {
-        await ctx.kv.set("positive_leads", "archive", [to_email]);
       }
     }
 
