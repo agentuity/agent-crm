@@ -159,7 +159,7 @@ export default async function Agent(
     // while we're in the middle of processing, they will be missed.
     // Feel that odds of that are very slim, but still a risk.
 
-    await ctx.kv.set("agent-crm-positive-leads", "emails", []);
+    // await ctx.kv.set("agent-crm-positive-leads", "emails", []);
 
     ctx.logger.info(
       `Finished processing positive emails. ${positive_emails.length} emails processed.`
