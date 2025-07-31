@@ -50,6 +50,7 @@ export default async function Agent(
         ${body}
 
         You should operate under these rules:
+        - NOTE: WE ARE IN TESTING MODE, YOU SHOULD ASSUME ALL EMAILS ARE COMPLEX, NOT SIMPLE.
         - If the email is simple, you must draft a reply.
           - If the email asks for a meeting, you should send this calendar link: https://cal.com/agentuity/30min
           - If the email asks about a website, you should send this link: https://agentuity.com
@@ -67,10 +68,10 @@ export default async function Agent(
           {
             "channel": "#agent-test-channel-nick",
             "text": "📬 *Email!*
-                    <@ID>, you have a new email from <${from_email}> (Campaign: ${campaign_id}) and it was too hard for me to figure out with my small LLM brain. Check your inbox (<${to_email}>).
+                    <@ID>, you have a new email from <${to_email}> (Campaign: ${campaign_id}) and it was too hard for me to figure out with my small LLM brain. Check your inbox (<${from_email}>).
                     "
           }
-          where ID is the user id of the person who should receive the message. You must determine this to be either Jeff Haynie, or Rick Blalock based on the ${to_email}.
+          where ID is the user id of the person who should receive the message. You must determine this to be either Jeff Haynie, or Rick Blalock based on the ${from_email}.
           The ids are:
           - Jeff Haynie: U08993W8V0T
           - Rick Blalock: U088UL77GDV
@@ -199,7 +200,27 @@ export default async function Agent(
           }
         }
       }
+
+      let archive_emails = await ctx.kv.get("positive_leads", "archive");
+      if (archive_emails.exists) {
+        let archive_emails_data = (await archive_emails.data.json()) as any[];
+        if (!archive_emails_data.includes(to_email)) {
+          archive_emails_data.push(to_email);
+          await ctx.kv.set("positive_leads", "archive", archive_emails_data);
+        }
+      } else {
+        await ctx.kv.set("positive_leads", "archive", [to_email]);
+      }
     }
+
+    // We've processed all the emails, so we can clear the KV.
+
+    // Technically a race condition? - if someone gets their lead status updated
+    // while we're in the middle of processing, they will be missed.
+    // Feel that odds of that are very slim, but still a risk.
+
+    await ctx.kv.set("positive_leads", "emails", []);
+
     ctx.logger.info(
       `Finished processing positive emails. ${positive_emails.length} emails processed.`
     );

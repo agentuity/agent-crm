@@ -47,15 +47,33 @@ If the event_type is LEAD_CATEGORY_UPDATED, you should:
   You should receive a success response.
 
 If the event_type is EMAIL_REPLY, you should:
-  1. Call the KV_STORE_EMAIL tool with input:
+  1. Call the KV_CHECK_ARCHIVE tool with input:
     {
-      "from_email": "<from_email>",
-      "to_email": "<to_email>",
-      "body": "<reply_message.html>",
-      "campaign_id": "<campaign_id>",
-      "stats_id": "<stats_id>"
+      "email": "<to_email>"
     }
-  You should receive a success response.
+    You should receive true or false.
+    1a. If the email is in the archive (true), all the SLACKBOT_SENDS_A_MESSAGE_TO_A_SLACK_CHANNEL tool with the following input:
+          {
+            "channel": "#agent-test-channel-nick",
+            "text": "📬 *Email!*
+                    <@ID>, you have a new reply from <to_name> (<to_email>) Check your inbox (<from_email>).
+                    "
+          }
+          where ID is the user id of the person who should receive the message. You must determine this to be either Jeff Haynie, or Rick Blalock based on the from_email.
+          The ids are:
+          - Jeff Haynie: U08993W8V0T
+          - Rick Blalock: U088UL77GDV
+          You must keep the ids in the format <@ID> including the "<@" and ">".
+
+    1b. If the email is not in the archive (false), call the KV_STORE_EMAIL tool with input:
+      {
+        "from_email": "<from_email>",
+        "to_email": "<to_email>",
+        "body": "<reply_message.html>",
+        "campaign_id": "<campaign_id>",
+        "stats_id": "<stats_id>"
+      }
+    You should receive a success response.
 `;
 
 const truncatePayload = (payload: any) => {

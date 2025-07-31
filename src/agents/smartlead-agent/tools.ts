@@ -78,6 +78,24 @@ export const toolMetadataList = [
     cache_control: undefined,
   },
   {
+    name: "KV_CHECK_ARCHIVE",
+    description: "Check if an email is in the archive KV.",
+    input_schema: {
+      type: "object",
+      properties: {
+        email: {
+          type: "string",
+          description: "The email address to check.",
+          title: "Email",
+          examples: ["john.doe@example.com"],
+        },
+      },
+      required: ["email"],
+      title: "KVCheckArchiveRequest",
+    },
+    cache_control: undefined,
+  },
+  {
     name: "HANDLE_LEAD_CATEGORY_UPDATED_ATTIO",
     description:
       "Handle LEAD_CATEGORY_UPDATED event by creating/updating records in Attio (steps 1-3 of the workflow).",
@@ -159,6 +177,15 @@ export const toolExecutors: Record<string, Function> = {
       ctx.logger.error("Failed to store positive lead in KV: %s", error);
       throw error;
     }
+  },
+
+  KV_CHECK_ARCHIVE: async ({ email }: { email: string }, ctx: AgentContext) => {
+    let archive_emails = await ctx.kv.get("positive_leads", "archive");
+    if (archive_emails.exists) {
+      let archive_emails_data = (await archive_emails.data.json()) as any[];
+      return archive_emails_data.includes(email);
+    }
+    return false;
   },
 
   HANDLE_LEAD_CATEGORY_UPDATED_ATTIO: async ({
