@@ -35,6 +35,12 @@ export const toolMetadataList = [
           title: "To Email",
           examples: ["jane.doe@example.com"],
         },
+        to_name: {
+          type: "string",
+          description: "The name of the recipient.",
+          title: "To Email",
+          examples: ["Jane", "Jane Doe"],
+        },
         body: {
           type: "string",
           description: "The body of the email.",
@@ -127,12 +133,14 @@ export const toolExecutors: Record<string, Function> = {
     {
       from_email,
       to_email,
+      to_name,
       body,
       campaign_id,
       stats_id,
     }: {
       from_email: string;
       to_email: string;
+      to_name: string;
       body: string;
       campaign_id: string;
       stats_id: string;
@@ -144,7 +152,7 @@ export const toolExecutors: Record<string, Function> = {
       await ctx.kv.set(
         "agent-crm-emails",
         to_email,
-        { from_email, body, campaign_id, stats_id },
+        { from_email, to_name, body, campaign_id, stats_id },
         {
           ttl: 60 * 60 * 24 * 2, // 2 days
         }

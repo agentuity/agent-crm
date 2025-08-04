@@ -23,12 +23,14 @@ export default async function Agent(
       if (dataResponse.exists) {
         let email_data = (await dataResponse.data.json()) as {
           from_email: string;
+          to_name: string;
           body: string;
           campaign_id: string;
           stats_id: string;
         };
 
         let from_email = email_data.from_email;
+        let to_name = email_data.to_name;
         let body = email_data.body;
         let campaign_id = email_data.campaign_id;
         let stats_id = email_data.stats_id;
@@ -113,7 +115,7 @@ export default async function Agent(
           # Input
 
           The email is from: ${to_email}
-          The email is to: ${from_email}
+          The email is to: ${to_name} (${from_email})
           The email body is:
           ${body}
 
@@ -166,6 +168,7 @@ export default async function Agent(
             }
           );
         } else {
+          ctx.logger.info("email body:", text);
           // Send a reply via smartlead API.
           // Get the tool executor with name SMARTLEAD_SEND_EMAIL_REPLY
           const smartleadSendEmailReplyExecutor =
