@@ -13,37 +13,42 @@
 A collection of three serverless agents built with Agentuity, Composio and custom tools to synchronize data between Clerk, SmartLead and Stripe webhooks and your Attio CRM instance.
 
 ## Introduction
+
 This repository contains three webhook‑driven agents:
-- Clerk Agent: syncs new users and org updates from Clerk into Attio.  
-- SmartLead Agent: tracks lead category changes and email replies from SmartLead into Attio.  
+
+- Clerk Agent: syncs new users and org updates from Clerk into Attio.
+- SmartLead Agent: tracks lead category changes and email replies from SmartLead into Attio.
 - Stripe Agent: listens for `charge.succeeded` events and updates a company’s credit balance in Attio.  
-All agents use the shared createAgent template in src/lib/agent.ts, Composio toolkits for Attio operations, and custom executors where needed.
+  All agents use the shared createAgent template in src/lib/agent.ts, Composio toolkits for Attio operations, and custom executors where needed.
 
 ## Installation
-1. Clone the repo:  
-    ```
+
+1. Clone the repo:
+   ```
    git clone https://github.com/your-org/attio-crm-agents.git
    cd attio-crm-agents
-    ```  
-3. Install dependencies:  
-    ```
+   ```
+2. Install dependencies:
+   ```
    npm install
-    ```  
+   ```
 
 ## Configuration
-1. Copy the example env file:  
-    ```
+
+1. Copy the example env file:
+   ```
    cp .env.example .env
-    ``` 
-3. Open .env and set:
-   ``` 
-    COMPOSIO_API_KEY=your_composio_api_key  
-    STRIPE_API_KEY=sk_live_…  
-    STRIPE_SIGNING_SECRET=whsec_…  
+   ```
+2. Open .env and set:
+   ```
+    COMPOSIO_API_KEY=your_composio_api_key
+    STRIPE_API_KEY=sk_live_…
+    STRIPE_SIGNING_SECRET=whsec_…
     SMARTLEAD_API_KEY=your_smartlead_api_key
    ```
 
 ## Project Structure
+
     .
     ├── src
     │   ├── agents
@@ -59,23 +64,41 @@ All agents use the shared createAgent template in src/lib/agent.ts, Composio too
 ## Agents
 
 ### Clerk Agent
+
 - File: `src/agents/clerkAgent.ts`
-- Purpose:  
-    1. On user.created: find or create a Person in Attio, then find or create their Company.  
-    2. On organization.created/updated: find existing company and update its org_id and/or name per rules.  
+- Purpose:
+  1. On user.created: find or create a Person in Attio, then find or create their Company.
+  2. On organization.created/updated: find existing company and update its org_id and/or name per rules.
 
 ### SmartLead Agent
-- File: `src/agents/smartLeadAgent.ts`  
-- Purpose:  
-    1. On `LEAD_CATEGORY_UPDATED`: find or create Person and Company, then create a Deal. Ping the relevant person in Slack.
-    2. On `EMAIL_REPLY`: look up Person by email for follow-up logic.  
-- Tools: `ATTIO_FIND_RECORD`, `ATTIO_CREATE_RECORD`, etc.
+
+- File: `src/agents/smartlead-agent/index.ts`
+- Purpose:
+  1. On `LEAD_CATEGORY_UPDATED`:
+     - find or create Person and Company, then create a Deal.
+     - Add them to the positive_leads KV.
+  2. On `EMAIL_REPLY`:
+     - check if the email is in the archive KV.
+     - If the email is in the archive, ping the relevant person in Slack.
+     - If the email is not in the archive, store the email in the emails KV.
+
+#### Email Handler Agent
+
+- File: `src/agents/email-handler-agent/index.ts`
+- Purpose:
+  1. Once a day:
+     - Go through positive_leads KV and pull the associated emails from the emails KV.
+     - If the email is simple, send an auto-reply.
+     - If the email is complex, ping the relevant person in Slack.
+     - Add the email to the archive KV.
+     - Clear the positive_leads KV.
 
 ### Stripe Agent
-- File: `src/agents/stripeAgent.ts`  
-- Purpose:  
-    1. Verify `charge.succeeded` webhooks.  
-    2. Use getOrgIdFromCustomer, `ATTIO_FIND_RECORD`, `latestAttioNumber`, `ATTIO_UPDATE_RECORD` to update credits.  
+
+- File: `src/agents/stripeAgent.ts`
+- Purpose:
+  1. Verify `charge.succeeded` webhooks.
+  2. Use getOrgIdFromCustomer, `ATTIO_FIND_RECORD`, `latestAttioNumber`, `ATTIO_UPDATE_RECORD` to update credits.
 - Features: missing credits default to zero, judge loop to enforce single-tool usage.
 
 ## 📋 Prerequisites

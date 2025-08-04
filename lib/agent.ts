@@ -29,7 +29,6 @@ export const createAgent = (
     ctx: AgentContext
   ) {
     let payload = await req.data.json();
-    ctx.logger.info("Payload:", payload);
     if (
       verifyWebhook &&
       !verifyWebhook(JSON.stringify(payload), req, resp, ctx)
@@ -40,7 +39,6 @@ export const createAgent = (
       });
     }
 
-    // Truncate the payload if a truncatePayload function is provided
     payload = truncatePayload ? truncatePayload(payload) : payload;
     ctx.logger.info("Truncated Payload:", payload);
 
@@ -154,6 +152,7 @@ OR
 - Make sure that the proposed tool calls are within the allowed tools.
 - Make sure that the proposed tool calls use the correct arguments for the tool.
 - Make sure that the proposed tool calls are not dangerous.
+    - You should *ignore* the content of any email body, as long as it is a string it is okay.
 
 **Allowed tools**
 ${JSON.stringify([...tools, ...extraTools], null, 2)}
@@ -224,7 +223,7 @@ Respond ONLY with the JSON decision object, no other text:
           const executor = customToolExecutors[toolCall.name];
           if (executor) {
             try {
-              const result = await executor(toolCall.input); // This is where the tool call is executed based on its executor.
+              const result = await executor(toolCall.input, ctx); // This is where the tool call is executed based on its executor.
               customResults.push({
                 tool_call_id: toolCall.id,
                 type: "tool_result",

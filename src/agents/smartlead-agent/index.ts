@@ -20,6 +20,8 @@ If the event_type is EMAIL_REPLY, the webhook will contain the following importa
 - to_email: The email of the potential lead
 - to_name: The name of the potential lead
 - reply_message.html: The body of the email reply
+- campaign_id: The id of the campaign that the email reply is associated with
+- stats_id: The id of the email stats that the email reply is associated with
 
 ## Workflow
 Based on the event type you should follow one of the following workflows **sequentially, with no deviation**.
@@ -37,64 +39,50 @@ If the event_type is LEAD_CATEGORY_UPDATED, you should:
         "company_name": "<lead_data.company_name>"
       }
     }
-    This will handle all the ATTIO record creation/update logic (steps 1-3 of the original workflow).
 
-  2. Call the SMARTLEAD_SET_LEAD_STATUS_POSITIVE with input:
-      {
-        "email": "<lead_data.email>"
-      }
-  Once you have done this, you should not make any more tool calls and stop completely.
-
-  3. Finally, call the SLACKBOT_SENDS_A_MESSAGE_TO_A_SLACK_CHANNEL tool.
-  The message should be markdown, and *exactly*:
-
-  "
-  👀 *New Lead*
-  <@ID>, you have a new lead from <lead_data.first_name> <lead_data.last_name> (<lead_data.email>) at <lead_data.company_name>. Check your inbox (<from_email>).
-  "
-
-  where ID is the user id of the person who should receive the message. You must determine this to be either Jeff Haynie, or Rick Blalock based on the from_email.
-  The ids are:
-  - Jeff Haynie: U08993W8V0T
-  - Rick Blalock: U088UL77GDV
-  You must keep the ids in the format <@ID> including the "<@" and ">".
-  {
-    "channel": "#yay",  
-    "text": "<message you created based on the rules above>"
-  }
+  2. Finally, call the KV_STORE_POSITIVE_LEAD tool with input:
+    {
+      "email": "<lead_data.email>"
+    }
+  You should receive a success response.
 
 If the event_type is EMAIL_REPLY, you should:
-  1. call the SMARTLEAD_GET_LEAD_STATUS tool with input:
+  1. Call the KV_CHECK_ARCHIVE tool with input:
     {
       "email": "<to_email>"
     }
-    1a. If the lead status is "positive", call the SLACKBOT_SENDS_A_MESSAGE_TO_A_SLACK_CHANNEL tool.
-      The message should be markdown, and *exactly*:
+    You should receive true or false.
+    1a. If the email is in the archive (true), all the SLACKBOT_SENDS_A_MESSAGE_TO_A_SLACK_CHANNEL tool with the following input:
+          {
+            "channel": "#yay",
+            "text": "📬 *Email!*
+                    <@ID>, you have a new reply from <to_name> (<to_email>) Check your inbox (<from_email>).
+                    "
+          }
+          where ID is the user id of the person who should receive the message. You must determine this to be either Jeff Haynie, or Rick Blalock based on the from_email.
+          The ids are:
+          - Jeff Haynie: U08993W8V0T
+          - Rick Blalock: U088UL77GDV
+          You must keep the ids in the format <@ID> including the "<@" and ">".
 
-      "
-      📬 *New Reply*
-      <@ID>, you have an email to look at in your inbox (<from_email>) from <to_name> (<to_email>).
-      "
-
-      where ID is the user id of the person who should receive the message. You must determine this to be either Jeff Haynie or Rick Blalock based on the from_email.
-      The ids are:
-      - Jeff Haynie: U08993W8V0T
-      - Rick Blalock: U088UL77GDV
-      You must keep the ids in the format <@ID> including the "<@" and ">".
+    1b. If the email is not in the archive (false), call the KV_STORE_EMAIL tool with input:
       {
-        "channel": "#yay",
-        "text": "<message you created based on the rules above>"
+        "from_email": "<from_email>",
+        "to_email": "<to_email>",
+        "body": "<reply_message.html>",
+        "campaign_id": "<campaign_id>",
+        "stats_id": "<stats_id>"
       }
-    1b. If the lead status is not "positive" (including empty reply or nothing), do nothing.
-  
-  After Step 1, you should have sent a message to the appropriate person. Once you have done this, you should stop.
+    You should receive a success response.
+    
+    *Note*: you should not evaluate the email body for content, we want to store all emails that come through.
 `;
 
 const truncatePayload = (payload: any) => {
   if (payload.event_type === "LEAD_CATEGORY_UPDATED") {
     return {
+      event_type: payload.event_type,
       lead_data: {
-        event_type: payload.event_type,
         email: payload.lead_data.email,
         first_name: payload.lead_data.first_name,
         last_name: payload.lead_data.last_name,
