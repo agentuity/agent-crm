@@ -54,7 +54,7 @@ If the event_type is EMAIL_REPLY, you should:
     You should receive true or false.
     1a. If the email is in the archive (true), all the SLACKBOT_SENDS_A_MESSAGE_TO_A_SLACK_CHANNEL tool with the following input:
           {
-            "channel": "#agent-test-channel-nick",
+            "channel": "#yay",
             "text": "📬 *Email!*
                     <@ID>, you have a new reply from <to_name> (<to_email>) Check your inbox (<from_email>).
                     "

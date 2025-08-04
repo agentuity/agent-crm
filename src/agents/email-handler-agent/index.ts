@@ -121,7 +121,7 @@ export default async function Agent(
 
           # Output Format
 
-          IMPORTANT: Use double newlines (\\n\\n) for paragraph breaks to ensure proper email formatting. Single newlines may not render correctly in email clients.
+          IMPORTANT: Format the email as HTML. Use <br> for newlines. \n will not work.
 
           You should output with one of two things EXACTLY:
           1. Email body including greeting and signature - no reasoning, just the body. Use double newlines between paragraphs.
@@ -160,7 +160,7 @@ export default async function Agent(
             {
               userId: "default",
               arguments: {
-                channel: "#agent-test-channel-nick",
+                channel: "#yay",
                 text: `📬 *Email!*
 <@${userId}>, you have a new message from ${to_email} that needs your response. Check your inbox (https://app.smartlead.ai/app/master-inbox?action=INBOX&leadMap=${campaign_lead_map_id}).
 `,
@@ -186,23 +186,23 @@ export default async function Agent(
           }
         }
 
-        // let archive_emails = await ctx.kv.get(
-        //   "agent-crm-positive-leads",
-        //   "archive"
-        // );
-        // if (archive_emails.exists) {
-        //   let archive_emails_data = (await archive_emails.data.json()) as any[];
-        //   if (!archive_emails_data.includes(to_email)) {
-        //     archive_emails_data.push(to_email);
-        //     await ctx.kv.set(
-        //       "agent-crm-positive-leads",
-        //       "archive",
-        //       archive_emails_data
-        //     );
-        //   }
-        // } else {
-        //   await ctx.kv.set("agent-crm-positive-leads", "archive", [to_email]);
-        // }
+        let archive_emails = await ctx.kv.get(
+          "agent-crm-positive-leads",
+          "archive"
+        );
+        if (archive_emails.exists) {
+          let archive_emails_data = (await archive_emails.data.json()) as any[];
+          if (!archive_emails_data.includes(to_email)) {
+            archive_emails_data.push(to_email);
+            await ctx.kv.set(
+              "agent-crm-positive-leads",
+              "archive",
+              archive_emails_data
+            );
+          }
+        } else {
+          await ctx.kv.set("agent-crm-positive-leads", "archive", [to_email]);
+        }
       }
     }
 
