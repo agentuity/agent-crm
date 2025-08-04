@@ -74,6 +74,8 @@ If the event_type is EMAIL_REPLY, you should:
         "stats_id": "<stats_id>"
       }
     You should receive a success response.
+    
+    *Note*: you should not evaluate the email body for content, we want to store all emails that come through.
 `;
 
 const truncatePayload = (payload: any) => {

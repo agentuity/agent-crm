@@ -140,6 +140,7 @@ export const toolExecutors: Record<string, Function> = {
     ctx: AgentContext
   ) => {
     try {
+      await ctx.kv.delete("agent-crm-emails", to_email);
       await ctx.kv.set(
         "agent-crm-emails",
         to_email,

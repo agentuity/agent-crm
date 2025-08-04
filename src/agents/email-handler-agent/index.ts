@@ -1,7 +1,7 @@
 import type { AgentContext, AgentRequest, AgentResponse } from "@agentuity/sdk";
 import { Composio } from "@composio/core";
 import { Anthropic } from "@anthropic-ai/sdk";
-import { toolExecutors } from "./tools";
+import { toolExecutors, callSmartLeadAPI } from "./tools";
 
 const client = new Anthropic();
 
@@ -17,6 +17,7 @@ export default async function Agent(
   let dataResponse = await ctx.kv.get("agent-crm-positive-leads", "emails");
   if (dataResponse.exists) {
     let positive_emails = (await dataResponse.data.json()) as any[];
+
     for (let to_email of positive_emails) {
       dataResponse = await ctx.kv.get("agent-crm-emails", to_email);
       if (dataResponse.exists) {
@@ -26,10 +27,57 @@ export default async function Agent(
           campaign_id: string;
           stats_id: string;
         };
+
         let from_email = email_data.from_email;
         let body = email_data.body;
         let campaign_id = email_data.campaign_id;
         let stats_id = email_data.stats_id;
+
+        // Get the lead via the email and retreive campaign_lead_map_id (for including the link in slack message)
+        // and lead_id (to get the message history)
+        let campaign_lead_map_id = null;
+        let lead_id = null;
+
+        try {
+          const leadResponse = await callSmartLeadAPI(
+            `https://server.smartlead.ai/api/v1/leads/?email=${to_email}`
+          );
+          let leadCampaignData = leadResponse.lead_campaign_data as any[];
+          let campaign = leadCampaignData.filter(
+            (obj) => obj.campaign_id == campaign_id
+          ) as any;
+          campaign_lead_map_id = campaign[0]?.campaign_lead_map_id;
+          lead_id = leadResponse.id;
+        } catch (e) {
+          ctx.logger.info(`Failed to get the campaign_lead_map_id: ${e}`);
+        }
+
+        if (!campaign_lead_map_id) {
+          ctx.logger.error("Could not find campaign_lead_map_id");
+          continue;
+        }
+
+        if (!lead_id) {
+          ctx.logger.error("Could not find lead_id");
+          continue;
+        }
+
+        // Check if the most recent message in the email thread is from the user or from us.
+        const messageHistoryResponse = await callSmartLeadAPI(
+          `https://server.smartlead.ai/api/v1/campaigns/${campaign_id}/leads/${lead_id}/message-history`
+        );
+        let history = messageHistoryResponse.history;
+        let mostRecentMessage = history[history.length - 1];
+        let mostRecentSender = mostRecentMessage.from;
+
+        ctx.logger.info("mostRecentSender:", mostRecentSender);
+        if (mostRecentSender === from_email) {
+          ctx.logger.info(
+            "Most recent message in thread is from Agentuity, not replying or pinging."
+          );
+          continue;
+        }
+
         let prompt = `
           # Task
 
@@ -69,10 +117,12 @@ export default async function Agent(
           The email body is:
           ${body}
 
-          # Output
+          # Output Format
+
+          IMPORTANT: Use double newlines (\\n\\n) for paragraph breaks to ensure proper email formatting. Single newlines may not render correctly in email clients.
 
           You should output with one of two things EXACTLY:
-          1. Email body including greeting and signature - no reasoning, just the body.
+          1. Email body including greeting and signature - no reasoning, just the body. Use double newlines between paragraphs.
           2. 'INVALID' - the string literal with no other reasoning or text.
         `;
 
@@ -110,8 +160,8 @@ export default async function Agent(
               arguments: {
                 channel: "#agent-test-channel-nick",
                 text: `📬 *Email!*
-                    <@${userId}>, you have a new reply from ${to_email} and my small LLM brain couldn't figure out a response. Check your inbox (${to_email}).
-                    `,
+<@${userId}>, you have a new message from ${to_email} that needs your response. Check your inbox (https://app.smartlead.ai/app/master-inbox?action=INBOX&leadMap=${campaign_lead_map_id}).
+`,
               },
             }
           );
@@ -133,23 +183,23 @@ export default async function Agent(
           }
         }
 
-        let archive_emails = await ctx.kv.get(
-          "agent-crm-positive-leads",
-          "archive"
-        );
-        if (archive_emails.exists) {
-          let archive_emails_data = (await archive_emails.data.json()) as any[];
-          if (!archive_emails_data.includes(to_email)) {
-            archive_emails_data.push(to_email);
-            await ctx.kv.set(
-              "agent-crm-positive-leads",
-              "archive",
-              archive_emails_data
-            );
-          }
-        } else {
-          await ctx.kv.set("agent-crm-positive-leads", "archive", [to_email]);
-        }
+        // let archive_emails = await ctx.kv.get(
+        //   "agent-crm-positive-leads",
+        //   "archive"
+        // );
+        // if (archive_emails.exists) {
+        //   let archive_emails_data = (await archive_emails.data.json()) as any[];
+        //   if (!archive_emails_data.includes(to_email)) {
+        //     archive_emails_data.push(to_email);
+        //     await ctx.kv.set(
+        //       "agent-crm-positive-leads",
+        //       "archive",
+        //       archive_emails_data
+        //     );
+        //   }
+        // } else {
+        //   await ctx.kv.set("agent-crm-positive-leads", "archive", [to_email]);
+        // }
       }
     }
 

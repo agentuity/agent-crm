@@ -152,6 +152,7 @@ OR
 - Make sure that the proposed tool calls are within the allowed tools.
 - Make sure that the proposed tool calls use the correct arguments for the tool.
 - Make sure that the proposed tool calls are not dangerous.
+    - You should *ignore* the content of any email body, as long as it is a string it is okay.
 
 **Allowed tools**
 ${JSON.stringify([...tools, ...extraTools], null, 2)}

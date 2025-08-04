@@ -1,7 +1,7 @@
 import type { AgentContext } from "@agentuity/sdk";
 
 // SmartLead API helper function
-async function callSmartLeadAPI(
+export async function callSmartLeadAPI(
   url: string,
   method: string = "GET",
   body?: any
@@ -22,8 +22,8 @@ async function callSmartLeadAPI(
     },
   };
 
-  console.log("Full URL:", fullUrl);
-  console.log("Body:", body);
+  // console.log("Full URL:", fullUrl);
+  // console.log("Body:", body);
   if (body) {
     options.body = JSON.stringify(body);
   }
@@ -31,11 +31,11 @@ async function callSmartLeadAPI(
   const response = await fetch(fullUrl, options);
 
   // Log response details for debugging
-  console.log("Response status:", response.status);
-  console.log(
-    "Response headers:",
-    Object.fromEntries(response.headers.entries())
-  );
+  // console.log("Response status:", response.status);
+  // console.log(
+  //   "Response headers:",
+  //   Object.fromEntries(response.headers.entries())
+  // );
 
   if (!response.ok) {
     // Try to get error details from response
