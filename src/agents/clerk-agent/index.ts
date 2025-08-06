@@ -4,6 +4,12 @@ const clerkWebhookPrompt = `
 You are processing webhooks from Clerk. 
 Your job is to manage people and companies in Attio based on Clerk user and organization events.
 
+## DATA FIELD INSTRUCTIONS:
+When using data fields in tool calls (like "data.email_addresses[0].email_address", "data.id", etc.):
+- Replace these placeholders with the ACTUAL VALUES from the webhook data
+- For dates (data.created_at), convert the timestamp to a formatted date string like "Aug 6, 2025"
+- Example: If data.created_at = 1704067200000, convert it to "Jan 1, 2024" format
+
 ## CORE RULES - NEVER VIOLATE THESE:
 1. NEVER make the same tool call twice with identical parameters
 2. If a search fails, try ONE alternative search pattern, then abort that search
@@ -36,7 +42,8 @@ Your job is to manage people and companies in Attio based on Clerk user and orga
   }
 
 **Step 2a: If person IS found, update with Clerk data**
-- call the ATTIO_UPDATE_RECORD tool with input:
+- call the ATTIO_UPDATE_RECORD tool with input (replace all "data.X" placeholders with actual values):
+  NOTE: For account_creation_date, format the timestamp as "MMM D, YYYY" (e.g., "Aug 6, 2025")
   {
     "object_type": "people",
     "record_id": "person_record_id_from_step_1",
@@ -50,12 +57,13 @@ Your job is to manage people and companies in Attio based on Clerk user and orga
         "full_name": "data.first_name data.last_name"
       },
       "user_id": "data.id",
-      "account_creation_date": "new Date(data.created_at).toISOString()"
+      "account_creation_date": "formatted date from data.created_at (e.g., 'Aug 6, 2025')"
     }
   }
 
 **Step 2b: If person NOT found, create new record**
-- call the ATTIO_CREATE_RECORD tool with input:
+- call the ATTIO_CREATE_RECORD tool with input (replace all "data.X" placeholders with actual values):
+  NOTE: For account_creation_date, format the timestamp as "MMM D, YYYY" (e.g., "Aug 6, 2025")
   {
     "object_type": "people",
     "values": {
@@ -68,7 +76,7 @@ Your job is to manage people and companies in Attio based on Clerk user and orga
         "full_name": "data.first_name data.last_name"
       },
       "user_id": "data.id",
-      "account_creation_date": "new Date(data.created_at).toISOString()"
+      "account_creation_date": "formatted date from data.created_at (e.g., 'Aug 6, 2025')"
     }
   }
 
@@ -125,7 +133,8 @@ Your job is to manage people and companies in Attio based on Clerk user and orga
 - If both fail: ABORT with error message
 
 **Step 2: Update person record**
-- call the ATTIO_UPDATE_RECORD tool with input:
+- call the ATTIO_UPDATE_RECORD tool with input (replace all "data.X" placeholders with actual values):
+  NOTE: For account_creation_date, format the timestamp as "MMM D, YYYY" (e.g., "Aug 6, 2025")
   {
     "object_type": "people",
     "record_id": "person_record_id_from_step_1",
@@ -139,7 +148,7 @@ Your job is to manage people and companies in Attio based on Clerk user and orga
         "full_name": "data.first_name data.last_name"  
       },
       "user_id": "data.id",
-      "account_creation_date": "new Date(data.created_at).toISOString()"
+      "account_creation_date": "formatted date from data.created_at (e.g., 'Aug 6, 2025')"
     }
   }
 - **CRITICAL: After updating the person, the workflow is COMPLETE. Do not make any more tool calls.**
