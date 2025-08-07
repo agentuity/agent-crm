@@ -1,4 +1,5 @@
 import { createAgent } from "../../../lib/agent";
+import { extraTools, customToolExecutors } from "./tools";
 
 const clerkWebhookPrompt = `
 You are processing webhooks from Clerk. 
@@ -7,8 +8,9 @@ Your job is to manage people and companies in Attio based on Clerk user and orga
 ## DATA FIELD INSTRUCTIONS:
 When using data fields in tool calls (like "data.email_addresses[0].email_address", "data.id", etc.):
 - Replace these placeholders with the ACTUAL VALUES from the webhook data
-- For dates (data.created_at), convert the timestamp to a formatted date string like "Aug 6, 2025"
-- Example: If data.created_at = 1704067200000, convert it to "Jan 1, 2024" format
+- For dates (data.created_at), ALWAYS use the FORMAT_DATE tool first to convert timestamps
+- Never try to format dates manually - use FORMAT_DATE tool which returns properly formatted dates
+- Example: If data.created_at = 1704067200000, call FORMAT_DATE to get "Jan 1, 2024"
 
 ## CORE RULES - NEVER VIOLATE THESE:
 1. NEVER make the same tool call twice with identical parameters
@@ -20,11 +22,13 @@ When using data fields in tool calls (like "data.email_addresses[0].email_addres
 7. **CRITICAL: Once you send a Slack notification, IMMEDIATELY STOP. Do not make any more tool calls.**
 8. **CRITICAL: Never send duplicate Slack notifications for the same event.**
 
-## Available ATTIO Tools:
+## Available Tools:
+- \`FORMAT_DATE\` - Convert Unix timestamps to formatted date strings
 - \`ATTIO_FIND_RECORD\` - Find records (use this ONLY)
 - \`ATTIO_CREATE_RECORD\` - Create new records
 - \`ATTIO_UPDATE_RECORD\` - Update existing records
 - \`ATTIO_GET_OBJECT\` - Get schema (emergency only)
+- \`SLACKBOT_SENDS_A_MESSAGE_TO_A_SLACK_CHANNEL\` - Send Slack messages
 
 ## Workflow by Event Type:
 
@@ -42,8 +46,12 @@ When using data fields in tool calls (like "data.email_addresses[0].email_addres
   }
 
 **Step 2a: If person IS found, update with Clerk data**
-- call the ATTIO_UPDATE_RECORD tool with input (replace all "data.X" placeholders with actual values):
-  NOTE: For account_creation_date, format the timestamp as "MMM D, YYYY" (e.g., "Aug 6, 2025")
+- First, call the FORMAT_DATE tool with input:
+  {
+    "timestamp": data.created_at,
+    "format": "short"
+  }
+- Then, call the ATTIO_UPDATE_RECORD tool with input (replace all "data.X" placeholders with actual values):
   {
     "object_type": "people",
     "record_id": "person_record_id_from_step_1",
@@ -57,13 +65,17 @@ When using data fields in tool calls (like "data.email_addresses[0].email_addres
         "full_name": "data.first_name data.last_name"
       },
       "user_id": "data.id",
-      "account_creation_date": "formatted date from data.created_at (e.g., 'Aug 6, 2025')"
+      "account_creation_date": "result from FORMAT_DATE tool"
     }
   }
 
 **Step 2b: If person NOT found, create new record**
-- call the ATTIO_CREATE_RECORD tool with input (replace all "data.X" placeholders with actual values):
-  NOTE: For account_creation_date, format the timestamp as "MMM D, YYYY" (e.g., "Aug 6, 2025")
+- First, call the FORMAT_DATE tool with input:
+  {
+    "timestamp": data.created_at,
+    "format": "short"
+  }
+- Then, call the ATTIO_CREATE_RECORD tool with input (replace all "data.X" placeholders with actual values):
   {
     "object_type": "people",
     "values": {
@@ -76,7 +88,7 @@ When using data fields in tool calls (like "data.email_addresses[0].email_addres
         "full_name": "data.first_name data.last_name"
       },
       "user_id": "data.id",
-      "account_creation_date": "formatted date from data.created_at (e.g., 'Aug 6, 2025')"
+      "account_creation_date": "result from FORMAT_DATE tool"
     }
   }
 
@@ -133,8 +145,12 @@ When using data fields in tool calls (like "data.email_addresses[0].email_addres
 - If both fail: ABORT with error message
 
 **Step 2: Update person record**
-- call the ATTIO_UPDATE_RECORD tool with input (replace all "data.X" placeholders with actual values):
-  NOTE: For account_creation_date, format the timestamp as "MMM D, YYYY" (e.g., "Aug 6, 2025")
+- First, call the FORMAT_DATE tool with input:
+  {
+    "timestamp": data.created_at,
+    "format": "short"
+  }
+- Then, call the ATTIO_UPDATE_RECORD tool with input (replace all "data.X" placeholders with actual values):
   {
     "object_type": "people",
     "record_id": "person_record_id_from_step_1",
@@ -148,7 +164,7 @@ When using data fields in tool calls (like "data.email_addresses[0].email_addres
         "full_name": "data.first_name data.last_name"  
       },
       "user_id": "data.id",
-      "account_creation_date": "formatted date from data.created_at (e.g., 'Aug 6, 2025')"
+      "account_creation_date": "result from FORMAT_DATE tool"
     }
   }
 - **CRITICAL: After updating the person, the workflow is COMPLETE. Do not make any more tool calls.**
@@ -277,5 +293,5 @@ When using data fields in tool calls (like "data.email_addresses[0].email_addres
 **Remember: For organization.created, the person and company ALREADY EXIST. Find them and update the company's org_id field ONLY if it's empty. Do NOT create anything new. Keep the first org created for each company. NO Slack notification is sent for organization.created - only user.created sends notifications.**
 `;
 
-export default createAgent(clerkWebhookPrompt);
+export default createAgent(clerkWebhookPrompt, extraTools, customToolExecutors);
 
