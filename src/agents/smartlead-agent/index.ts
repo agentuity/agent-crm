@@ -19,7 +19,7 @@ If the event_type is EMAIL_REPLY, the webhook will contain the following importa
 - from_email: The email of the person in our organization who sent the original email
 - to_email: The email of the potential lead
 - to_name: The name of the potential lead
-- reply_message.html: The body of the email reply
+- reply_message.text: The body of the email reply
 - campaign_id: The id of the campaign that the email reply is associated with
 - stats_id: The id of the email stats that the email reply is associated with
 
@@ -72,7 +72,7 @@ If the event_type is EMAIL_REPLY, you should:
       {
         "from_email": "<from_email>",
         "to_email": "<to_email>",
-        "body": "<reply_message.html>",
+        "body": "<reply_message.text>",
         "campaign_id": "<campaign_id>",
         "stats_id": "<stats_id>"
       }
@@ -101,7 +101,7 @@ const truncatePayload = (payload: any) => {
       to_email: payload.to_email,
       to_name: payload.to_name,
       reply_message: {
-        html: payload.reply_message.html,
+        text: payload.reply_message.text,
       },
       campaign_id: payload.campaign_id,
       stats_id: payload.stats_id,
