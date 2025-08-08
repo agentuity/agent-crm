@@ -203,6 +203,9 @@ export default async function Agent(
         } else {
           await ctx.kv.set("agent-crm-positive-leads", "archive", [to_email]);
         }
+
+        // Now that we have processed this email we should delete it from the KV.
+        await ctx.kv.delete("agent-crm-emails", to_email);
       }
     }
 
