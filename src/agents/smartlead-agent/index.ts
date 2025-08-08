@@ -45,6 +45,7 @@ If the event_type is LEAD_CATEGORY_UPDATED, you should:
       "email": "<lead_data.email>"
     }
   You should receive a success response.
+  nce you have called this tool, do not make any more tool calls. You are done.
 
 If the event_type is EMAIL_REPLY, you should:
   1. Call the KV_CHECK_ARCHIVE tool with input:
@@ -65,6 +66,8 @@ If the event_type is EMAIL_REPLY, you should:
           - Rick Blalock: U088UL77GDV
           You must keep the ids in the format <@ID> including the "<@" and ">".
 
+          Once you have called this tool, do not make any more tool calls. You are done.
+
     1b. If the email is not in the archive (false), call the KV_STORE_EMAIL tool with input:
       {
         "from_email": "<from_email>",
@@ -74,6 +77,7 @@ If the event_type is EMAIL_REPLY, you should:
         "stats_id": "<stats_id>"
       }
     You should receive a success response.
+    Once you have called this tool, do not make any more tool calls. You are done.
     
     *Note*: you should not evaluate the email body for content, we want to store all emails that come through.
 `;
