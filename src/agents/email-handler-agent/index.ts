@@ -184,6 +184,18 @@ export default async function Agent(
               ctx
             );
           }
+          const pingResult = await composio.tools.execute(
+            "SLACKBOT_SENDS_A_MESSAGE_TO_A_SLACK_CHANNEL",
+            {
+              userId: "default",
+              arguments: {
+                channel: "#yay",
+                text: `🤖📬 *Auto-Reply Email!*
+An autoreply has been sent to ${to_email}. View the email chain here: (https://app.smartlead.ai/app/master-inbox?action=INBOX&leadMap=${campaign_lead_map_id}).
+`,
+              },
+            }
+          );
         }
 
         let archive_emails = await ctx.kv.get(
