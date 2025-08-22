@@ -504,6 +504,8 @@ export const handleOrganizationCreatedExecutor = async (
     }
 
     if (!creatorPerson) {
+      // At this point you could also check...
+      // Try extracting email from organization metadata (if available in data.members or data.creator_email)
       // Use exact error message from original rules
       throw new Error(
         `Creator not found with user_id: ${data.created_by} after 3 attempts with backoff. Both events fired simultaneously - person record may not be indexed yet.`
