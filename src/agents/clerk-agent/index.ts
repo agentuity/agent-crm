@@ -50,6 +50,7 @@ Based on the webhook event type (data.type), call the appropriate handler tool:
 - If webhook type is not recognized, log error and abort
 - Each handler tool contains all the retry logic, error handling, and business rules from the original prompt
 - Never repeat tool calls - each handler tool is designed to be called once per webhook
+- **CRITICAL**: If the tool returns with an error, just stop. Do not call anything else.
 
 **Remember: Each webhook handler tool contains ALL the necessary logic. Just call the appropriate tool once and let it handle the complete workflow.**
 `;
