@@ -53,7 +53,7 @@ If the event_type is EMAIL_REPLY, you should:
       "email": "<to_email>"
     }
     You should receive true or false.
-    1a. If the email is in the archive (true), all the SLACKBOT_SENDS_A_MESSAGE_TO_A_SLACK_CHANNEL tool with the following input:
+    1a. If the email is in the archive (true), all the SLACKBOT_SEND_MESSAGE tool with the following input:
           {
             "channel": "#yay",
             "text": "📬 *Email!*

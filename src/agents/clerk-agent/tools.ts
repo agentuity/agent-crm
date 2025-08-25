@@ -331,16 +331,13 @@ export const handleUserCreatedExecutor = async (
     }
 
     // Step 4: Send Slack notification and STOP
-    await composio.tools.execute(
-      "SLACKBOT_SENDS_A_MESSAGE_TO_A_SLACK_CHANNEL",
-      {
-        userId: "default",
-        arguments: {
-          channel: "#yay",
-          text: `:catshake: ${data.first_name} ${data.last_name} \`${data.id}\` signed up with ${data.email_addresses[0].email_address} :spinningparrot:`,
-        },
-      }
-    );
+    await composio.tools.execute("SLACKBOT_SEND_MESSAGE", {
+      userId: "default",
+      arguments: {
+        channel: "#yay",
+        text: `:catshake: ${data.first_name} ${data.last_name} \`${data.id}\` signed up with ${data.email_addresses[0].email_address} :spinningparrot:`,
+      },
+    });
 
     ctx.logger.info(
       "Sent Slack notification for user.created, workflow complete"

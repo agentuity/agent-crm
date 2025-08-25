@@ -156,7 +156,7 @@ export default async function Agent(
             userId = "U08993W8V0T"; // Jeff Haynie
           }
           const pingResult = await composio.tools.execute(
-            "SLACKBOT_SENDS_A_MESSAGE_TO_A_SLACK_CHANNEL",
+            "SLACKBOT_SEND_MESSAGE",
             {
               userId: "default",
               arguments: {
@@ -185,7 +185,7 @@ export default async function Agent(
             );
           }
           const pingResult = await composio.tools.execute(
-            "SLACKBOT_SENDS_A_MESSAGE_TO_A_SLACK_CHANNEL",
+            "SLACKBOT_SEND_MESSAGE",
             {
               userId: "default",
               arguments: {

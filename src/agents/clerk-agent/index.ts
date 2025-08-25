@@ -86,7 +86,7 @@ When using data fields in tool calls (like "data.email_addresses[0].email_addres
 - \`ATTIO_CREATE_RECORD\` - Create new records
 - \`ATTIO_UPDATE_RECORD\` - Update existing records
 - \`ATTIO_GET_OBJECT\` - Get schema (emergency only)
-- \`SLACKBOT_SENDS_A_MESSAGE_TO_A_SLACK_CHANNEL\` - Send Slack messages
+- \`SLACKBOT_SEND_MESSAGE\` - Send Slack messages
 
 ## Workflow by Event Type:
 
@@ -175,7 +175,7 @@ When using data fields in tool calls (like "data.email_addresses[0].email_addres
 - **If domain IS a personal provider**: Skip company search/creation entirely
 
 **Step 4: Send Slack notification AND STOP**
-- call the SLACKBOT_SENDS_A_MESSAGE_TO_A_SLACK_CHANNEL tool with input:
+- call the SLACKBOT_SEND_MESSAGE tool with input:
   {
     "channel": "#yay",
     "text": ":catshake: data.first_name data.last_name \`data.id\` signed up with data.email_addresses[0].email_address :spinningparrot:"
