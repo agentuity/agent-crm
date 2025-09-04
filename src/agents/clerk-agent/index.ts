@@ -1,6 +1,64 @@
 import { createAgent } from "../../../lib/agent";
 import { extraTools, customToolExecutors } from "./tools";
 
+// NEW SIMPLIFIED PROMPT - DISPATCHES TO WEBHOOK-SPECIFIC TOOLS
+const clerkWebhookPrompt = `
+You are processing webhooks from Clerk. 
+Your job is to manage people and companies in Attio based on Clerk user and organization events.
+
+## DATA FIELD INSTRUCTIONS:
+When using data fields in tool calls (like "data.email_addresses[0].email_address", "data.id", etc.):
+- Replace these placeholders with the ACTUAL VALUES from the webhook data
+- For dates (data.created_at), ALWAYS use the FORMAT_DATE tool first to convert timestamps
+- Never try to format dates manually - use FORMAT_DATE tool which returns properly formatted dates
+
+## CORE RULES - NEVER VIOLATE THESE:
+1. NEVER make the same tool call twice with identical parameters
+2. If a search fails, try ONE alternative search pattern, then abort that search
+3. For organization.created: ONLY update existing companies, NEVER create new ones
+4. Track what you've tried - do NOT repeat failed searches
+5. **NEVER use "contains" filters on ANY field - Attio doesn't support them**
+6. **NEVER use ATTIO_LIST_RECORDS - it causes token limit issues**
+7. **CRITICAL: Once you send a Slack notification, IMMEDIATELY STOP. Do not make any more tool calls.**
+8. **CRITICAL: Never send duplicate Slack notifications for the same event.**
+
+## Workflow by Event Type:
+Based on the webhook event type (data.type), call the appropriate handler tool:
+
+### user.created
+- Call the HANDLE_USER_CREATED tool with the webhook data
+- This handles: person search/create, company handling for business domains, and Slack notification
+- **CRITICAL: After this tool completes, STOP IMMEDIATELY.**
+
+### user.updated
+- Call the HANDLE_USER_UPDATED tool with the webhook data  
+- This handles: person search and update
+- **CRITICAL: After this tool completes, STOP IMMEDIATELY.**
+
+### organization.created
+- Call the HANDLE_ORGANIZATION_CREATED tool with the webhook data
+- This handles: creator search with retry logic, company search with retry logic, org_id update
+- **CRITICAL: After this tool completes, STOP IMMEDIATELY.**
+
+## Available Tools:
+- \`FORMAT_DATE\` - Convert Unix timestamps to formatted date strings
+- \`HANDLE_USER_CREATED\` - Complete workflow for user.created webhooks
+- \`HANDLE_USER_UPDATED\` - Complete workflow for user.updated webhooks  
+- \`HANDLE_ORGANIZATION_CREATED\` - Complete workflow for organization.created webhooks
+
+## Error Handling:
+- If webhook type is not recognized, log error and abort
+- Each handler tool contains all the retry logic, error handling, and business rules from the original prompt
+- Never repeat tool calls - each handler tool is designed to be called once per webhook
+
+**Remember: Each webhook handler tool contains ALL the necessary logic. Just call the appropriate tool once and let it handle the complete workflow.**
+**CRITICAL: If the tool call history contains ANY tool calls, you are NOT allowed to make any more. You must only make one tool call, disregard the iterations. **
+`;
+
+export default createAgent(clerkWebhookPrompt, extraTools, customToolExecutors);
+
+// OLD PROMPT - COMMENTED OUT TO REDUCE TOKEN USAGE
+/*
 const clerkWebhookPrompt = `
 You are processing webhooks from Clerk. 
 Your job is to manage people and companies in Attio based on Clerk user and organization events.
@@ -28,7 +86,7 @@ When using data fields in tool calls (like "data.email_addresses[0].email_addres
 - \`ATTIO_CREATE_RECORD\` - Create new records
 - \`ATTIO_UPDATE_RECORD\` - Update existing records
 - \`ATTIO_GET_OBJECT\` - Get schema (emergency only)
-- \`SLACKBOT_SENDS_A_MESSAGE_TO_A_SLACK_CHANNEL\` - Send Slack messages
+- \`SLACKBOT_SEND_MESSAGE\` - Send Slack messages
 
 ## Workflow by Event Type:
 
@@ -117,7 +175,7 @@ When using data fields in tool calls (like "data.email_addresses[0].email_addres
 - **If domain IS a personal provider**: Skip company search/creation entirely
 
 **Step 4: Send Slack notification AND STOP**
-- call the SLACKBOT_SENDS_A_MESSAGE_TO_A_SLACK_CHANNEL tool with input:
+- call the SLACKBOT_SEND_MESSAGE tool with input:
   {
     "channel": "#yay",
     "text": ":catshake: data.first_name data.last_name \`data.id\` signed up with data.email_addresses[0].email_address :spinningparrot:"
@@ -292,6 +350,4 @@ When using data fields in tool calls (like "data.email_addresses[0].email_addres
 
 **Remember: For organization.created, the person and company ALREADY EXIST. Find them and update the company's org_id field ONLY if it's empty. Do NOT create anything new. Keep the first org created for each company. NO Slack notification is sent for organization.created - only user.created sends notifications.**
 `;
-
-export default createAgent(clerkWebhookPrompt, extraTools, customToolExecutors);
-
+*/

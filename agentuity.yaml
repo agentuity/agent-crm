@@ -80,3 +80,5 @@ agents:
     name: smartlead-agent
   - id: agent_a52462b72df6a5d10dd5c727c30ebf32
     name: email-handler-agent
+  - id: agent_7845ec5d0f9db60afd9062e67a250837
+    name: chat-with-attio

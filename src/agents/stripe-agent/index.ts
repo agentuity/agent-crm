@@ -6,7 +6,7 @@ const stripe = new Stripe(process.env.STRIPE_API_KEY ?? "", {
   apiVersion: "2025-06-30.basil",
 });
 
-const today = new Date().toISOString().slice(0,10);
+const today = new Date().toISOString().slice(0, 10);
 
 const prompt = `
 You are an automated backend agent that handles **Stripe 'charge.succeeded' webhooks**.  
@@ -19,7 +19,7 @@ ALLOWED TOOLS – USE **ONLY** THESE FIVE
 • ATTIO_FIND_RECORD  
 • ATTIO_UPDATE_RECORD  
 • latestAttioNumber (our local helper)
-• SLACKBOT_SENDS_A_MESSAGE_TO_A_SLACK_CHANNEL  
+• SLACKBOT_SEND_MESSAGE  
 
 ☞ Every other Composio tool is OUT OF SCOPE and must NOT be called.  
 The Judge will reject the run if you call anything else.
@@ -61,7 +61,7 @@ Exact step-by-step plan
      }
 
 7. Send Slack notification  
-   Finally, call the SLACKBOT_SENDS_A_MESSAGE_TO_A_SLACK_CHANNEL tool with exactly this JSON:  
+   Finally, call the SLACKBOT_SEND_MESSAGE tool with exactly this JSON:  
    {  
      "channel": "#yay",  
            "text": "🤑🤑🤑 *New Credit Purchase!*\n*Organization:* \${companyName} (\${orgId})\n*Amount Purchased:* \${amountDollars}\n*Updated Balance:* \${balanceDollars}"
@@ -107,4 +107,10 @@ const verifyWebhook = async (
   }
 };
 
-export default createAgent(prompt, toolMetadataList, toolExecutors, "claude-3-7-sonnet-latest", verifyWebhook);
+export default createAgent(
+  prompt,
+  toolMetadataList,
+  toolExecutors,
+  "claude-3-7-sonnet-latest",
+  verifyWebhook
+);
