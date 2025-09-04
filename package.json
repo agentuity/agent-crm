@@ -40,6 +40,7 @@
     "@composio/core": "^0.1.39",
     "@composio/vercel": "^0.1.37",
     "ai": "^4.3.16",
+    "composio-core": "^0.5.39",
     "drizzle-orm": "^0.44.2",
     "groq-sdk": "^0.29.0",
     "openai": "^5.8.2",
