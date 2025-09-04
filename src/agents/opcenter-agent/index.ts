@@ -101,6 +101,8 @@ export default async function Agent(
       response
     );
 
+    ctx.logger.info("Result:", toolCallResult);
+
     // Second LLM call to analyze if the tool result answers the user's query
     const analysisResponse = await client.messages.create({
       model: "claude-3-5-sonnet-20241022",
@@ -110,6 +112,7 @@ export default async function Agent(
           role: "user",
           content: `
           You are analyzing whether a tool call result successfully answers a user's query.
+          Typically, users will be requesting record data such as an attribute from a person or company.
           
           Original User Request: ${request}
           
@@ -146,6 +149,8 @@ export default async function Agent(
         reason: "Could not parse analysis result",
       };
     }
+
+    ctx.logger.info("Analysis:", analysisResult);
 
     if (analysisResult.success) {
       // Tool call successfully answered the query, break the loop
