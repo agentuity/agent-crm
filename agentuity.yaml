@@ -80,8 +80,6 @@ agents:
     name: smartlead-agent
   - id: agent_a52462b72df6a5d10dd5c727c30ebf32
     name: email-handler-agent
-  - id: agent_7845ec5d0f9db60afd9062e67a250837
-    name: chat-with-attio
   - id: agent_504b1d33aeafa140d988286ef160f8ba
     name: opcenter-agent
     description: gets information from attio based on a request from opcenter
