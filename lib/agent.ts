@@ -14,7 +14,7 @@ export const createAgent = (
   prompt: string,
   extraTools: any[] = [],
   customToolExecutors: Record<string, Function> = {},
-  plannerModel: string = "claude-3-7-sonnet-20250219",
+  plannerModel: string = "claude-sonnet-4-20250514",
   verifyWebhook?: (
     rawBody: string,
     req: AgentRequest,
