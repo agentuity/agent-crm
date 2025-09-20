@@ -22,11 +22,19 @@ export default async function Agent(
     toolkits: ["ATTIO"],
   });
 
-  const maxIterations = 10;
+  const maxIterations = 5;
   let iteration = 0;
   let allToolCalls: any[] = [];
   let rejectedToolCalls: Array<{ toolCall: any; result: any; reason: string }> =
     [];
+
+  let guidelines = await ctx.kv.get("crm-opecenter-guidelines", "guidelines");
+  let guidelinesString;
+  if (guidelines.exists) {
+    guidelinesString = await guidelines.data.text();
+  } else {
+    guidelinesString = "";
+  }
 
   while (iteration < maxIterations) {
     const response = await client.messages.create({
@@ -45,7 +53,20 @@ export default async function Agent(
           1. Do not repeat tool calls. If a tool call does not give you what you want, never duplicate it.
           2. Utilize all READ tools at your disposal. If the tool you expect doesn't work, try something else.
           3. NEVER use WRITE/UPDATE tools. These are off limits.
-          4. Learn from previously rejected tool calls - if a tool call was rejected for not answering the query, try a different approach or different tools.
+          4. Learn from **GUIDELINES** -  this is your primary source.
+          4. Learn from **previously rejected tool calls** - if a tool call was rejected for not answering the query, try a different approach or different tools.
+          5. We may use language like "user" and "organization". Attio only recognizes those as "people" and "companies". Keep that in mind during your request.
+
+          ${
+            guidelinesString
+              ? `## LEARNED GUIDELINES\n
+              These guidelines have been learned by repeating this process over time. They will tell you what has been successful in the past for certain query types.
+              These are paramount to review before making any tool calls, as it will save you iterations.
+              
+              ${guidelinesString}
+              `
+              : ""
+          }
 
           **CRITICAL**
           Note: We use CUSTOM ATTIO ATTRIBUTES \`user_id\` and \`org_id\`. In order to search for these with the tools you have,
@@ -125,7 +146,7 @@ export default async function Agent(
           Respond with a JSON object in this exact format:
           {
             "success": true/false,
-            "reason": "explanation of why it succeeds or fails to answer the query"
+            "reason": "Explanation of why it succeeds or fails to answer the query. Provide any suggestions that may help the next tool call succeed."
           }
           
           If the result contains the requested information or data, return success: true.
@@ -153,6 +174,51 @@ export default async function Agent(
     ctx.logger.info("Analysis:", analysisResult);
 
     if (analysisResult.success) {
+      const guidelinesResponse = await client.messages.create({
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 500,
+        messages: [
+          {
+            role: "user",
+            content: `
+          You are a guideline writer for an LLM making Attio tool calls.
+          You will be given a **user query**, a **successful tool call**, and a **guidelines string** .
+          Your job is to take an existing (or empty) **guidelines string**, and append / alter it as necessary.
+          
+          **Rules**
+          1. Do not change the guideline string except in areas where it is relevant. Keep all irrelevant parts the same.
+          2. Be general about things like names, ids, etc. But specific about format.
+          3. If there is already a guideline that is similar to the provided tool call, you can leave the guideline string unchanged.
+
+          **Output**
+            Each guideline should be formatted as a numbered list using this structure:
+
+            #. For queries like [general description], use this tool call pattern: [tool call structure]
+
+            Where:
+            - [general description]: Describe the **user query** in general terms. What is it seeking (person, company, value, etc.)? What information does it provide?
+            - [tool call structure]: Provide a generalized version of the **successful tool call** as a **JSON OBJECT**. Remove specific details like IDs, names, or search criteria. Retain elements like record type and structure.
+
+            Return the complete **guideline string** either modified or unchanged.
+
+          User Query: ${request}
+          Successful Tool Call: ${JSON.stringify(toolCalls, null, 2)}
+          Current Guidelines: ${guidelinesString}
+          `,
+          },
+        ],
+      });
+
+      const updatedGuidelinesText =
+        guidelinesResponse.content.find((block) => block.type === "text")
+          ?.text || guidelinesString;
+      ctx.logger.info("Updated Guidelines: ", updatedGuidelinesText);
+      await ctx.kv.set(
+        "crm-opecenter-guidelines",
+        "guidelines",
+        updatedGuidelinesText
+      );
+
       // Tool call successfully answered the query, break the loop
       return resp.json(toolCallResult || { error: "No tool results found" });
     } else {
