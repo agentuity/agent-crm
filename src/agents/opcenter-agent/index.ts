@@ -22,7 +22,7 @@ export default async function Agent(
     toolkits: ["ATTIO"],
   });
 
-  const maxIterations = 5;
+  const maxIterations = 10;
   let iteration = 0;
   let allToolCalls: any[] = [];
   let rejectedToolCalls: Array<{ toolCall: any; result: any; reason: string }> =
