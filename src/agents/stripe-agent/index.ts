@@ -56,7 +56,7 @@ Exact step-by-step plan
    • object_id   = "companies"  
    • record_id   = <record_id>  
    • body.values = {  
-       credits_bought         : newCredits,  
+       credits_bought : newCredits,  
        last_credit_purchase : purchaseDate  
      }
 
@@ -67,12 +67,17 @@ Exact step-by-step plan
            "text": "🤑🤑🤑 *New Credit Purchase!*\n*Organization:* \${companyName} (\${orgId})\n*Amount Purchased:* \${amountDollars}\n*Updated Balance:* \${balanceDollars}"
      }
      
-     **Calculation rules:**
-     - amount is already in dollars. amountDollars = amount (e.g. 100 = $100.00)
-     - newCredits is already in dollars. balanceDollars = newCredits (e.g. 1400 = $1,400.00)
-     - Format with comma separators and two decimal places  
-   }
+     **Calculation rules (for display):**
+      - amountCents = data.object.amount              // integer cents from Stripe
+      - amountDollars = amountCents / 100             // e.g., 2000 -> $20.00
 
+      - currentCreditsCents = currentCredits          // treat Attio credits_bought as cents
+      - newCreditsCents = currentCreditsCents + amountCents
+      - balanceDollars = newCreditsCents / 100        // e.g., 400000 -> $4,000.00
+
+      - When rendering dollars, format with comma separators and two decimals
+        (e.g., 20 -> "$20.00", 4000 -> "$4,000.00")
+   }
 
 8. If you have updated the record, stop here. Do not perform any further updates or actions after this step.
    Reply with **exactly**: {"status":"ok"}
